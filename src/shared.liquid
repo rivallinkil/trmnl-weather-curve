@@ -439,6 +439,8 @@
         });
       });
     };
-    document.addEventListener('DOMContentLoaded', window.dwdDraw);
+    // Draw once the views' SVGs are parsed, also when the page has already loaded.
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.dwdDraw);
+    else window.dwdDraw();
   })();
 </script>
