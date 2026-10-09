@@ -1,3 +1,5 @@
+<img src="docs/icon.svg" alt="Weather Curve icon" width="88" align="right">
+
 # Weather Curve (DWD)
 
 A 7-day weather forecast for [TRMNL](https://trmnl.com) e-paper displays: one temperature curve for daily highs and lows, a weather icon per day, and the chance of rain as an area along the bottom.
