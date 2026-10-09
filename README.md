@@ -31,7 +31,7 @@ Data: Deutscher Wetterdienst, [CC BY 4.0](https://creativecommons.org/licenses/b
 
 1. TRMNL polls Bright Sky hourly for the next 8 days of hourly data at the chosen location ([`src/settings.yml`](src/settings.yml)).
 2. A serverless transform condenses about 190 hourly rows into 7 daily rows ([`src/transform.py`](src/transform.py)).
-3. The views draw everything as one SVG per layout, in IBM Plex Sans ([`src/shared.liquid`](src/shared.liquid)).
+3. The views draw everything as one SVG per layout, in TRMNL's own Inter font ([`src/shared.liquid`](src/shared.liquid)).
 
 ## Development
 

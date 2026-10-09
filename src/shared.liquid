@@ -1,20 +1,13 @@
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=block">
-
 <style>
   .dwd-root { width: 100%; height: 100%; }
   .dwd-svg { display: block; width: 100%; height: 100%; }
-  .dwd-empty { padding: 24px; font-family: 'IBM Plex Sans', sans-serif; font-size: 18px; }
+  .dwd-empty { padding: 24px; font-family: 'Inter Variable', Inter, sans-serif; font-size: 18px; }
 </style>
 
 {% assign dwd_fields = trmnl.plugin_settings.custom_fields_values %}
-{% comment %} TRMNL stores select values in lower case, e.g. "deutsch". {% endcomment %}
 {% assign dwd_lang = dwd_fields.language | default: "auto" | downcase %}
 {% assign dwd_units = dwd_fields.units | default: "celsius" | downcase %}
-{% if dwd_lang == "deutsch" %}
-  {% assign dwd_lang = "de" %}
-{% elsif dwd_lang == "english" %}
-  {% assign dwd_lang = "en" %}
-{% else %}
+{% if dwd_lang != "de" and dwd_lang != "en" %}
   {% assign dwd_locale = trmnl.user.locale | default: "en" | slice: 0, 2 | downcase %}
   {% if dwd_locale == "de" %}{% assign dwd_lang = "de" %}{% else %}{% assign dwd_lang = "en" %}{% endif %}
 {% endif %}
@@ -35,7 +28,7 @@
   (function () {
     if (window.dwdDraw) return;
     var NS = 'http://www.w3.org/2000/svg';
-    var FONT = "'IBM Plex Sans', sans-serif";
+    var FONT = "'Inter Variable', Inter, sans-serif";
     var GRAY = '#aaa';
 
     function el(parent, tag, attrs) {
@@ -57,6 +50,15 @@
       return t;
     }
     function deg(t) { return t == null ? '–' : t + '°'; }
+    // Shortens a long station or display name with "…" until it fits maxW.
+    function fit(t, maxW) {
+      var s = t.textContent;
+      while (s.length > 1 && t.getComputedTextLength() > maxW) {
+        s = s.slice(0, -1);
+        t.textContent = s.replace(/\s+$/, '') + '…';
+      }
+      return t;
+    }
     // Big current temperature at the design size; shrinks only if it would run into the icon.
     function bigTemp(p, x, y, size, maxRight) {
       var t = txt(p, x, y, deg(V.now.temp), { size: size, weight: 500, ls: -0.04 * size });
@@ -312,8 +314,8 @@
     // Today block shared by the list and portrait designs (y 0-208).
     function todayBlock(svg) {
       var D = V;
-      txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
-      txt(svg, 376, 40, D.dateShort, { size: 14, anchor: 'end' });
+      var date = txt(svg, 376, 40, D.dateShort, { size: 14, anchor: 'end' });
+      fit(txt(svg, 24, 40, D.station, { size: 18, weight: 600 }), 352 - date.getComputedTextLength() - 16);
       bigTemp(svg, 24, 134, 96, 318);
       icon(svg, D.now.icon, 347, 87.85, 1.826, 2.8);
       txt(svg, 376, 133, D.now.text, { size: 16, weight: 500, anchor: 'end' });
@@ -325,7 +327,7 @@
       // 800 x 480 and taller (TRMNL X)
       full: function (svg, H) {
         var D = V, t = D.days[0], m = D.days[1], e = H - 480;
-        txt(svg, 24, 43, D.station, { size: 20, weight: 600 });
+        fit(txt(svg, 24, 43, D.station, { size: 20, weight: 600 }), 232);
         txt(svg, 24, 64, D.dateLong, { size: 14 });
         bigTemp(svg, 24, 178, 112, 191);
         icon(svg, D.now.icon, 223.0, 122.9, 2.068, 3.2);
@@ -345,11 +347,13 @@
         footer(svg, 24, 776, 436 + e, 458 + e, 13);
       },
 
-      // 400 x 520+: today on top, the 7-day curve below (full view in portrait)
+      // 400 x 520+: today on top, the 7-day curve below (full view in portrait, tall half views).
+      // The curve spans at most 420; taller screens give the rest to the rain area and headroom.
       portrait: function (svg, H) {
-        var base = H - 86;
+        var base = H - 86, extra = Math.max(0, base - 78 - 262 - 420) / 2;
         todayBlock(svg);
-        chart(svg, V.days, { x0: 24, x1: 376, gridTop: 222, base: base, rainTop: base - 40, yMax: 262, yMin: base - 78,
+        chart(svg, V.days, { x0: 24, x1: 376, gridTop: 222, base: base, rainTop: base - 40 - extra, yMax: 262 + extra,
+          yMin: base - 78 - extra,
           legend: false, hiW: 2, loW: 1.5, hiR: 3.5, hiRW: 1.75, loR: 2.6, hiOff: -10, loOff: 19, hiSize: 15, loSize: 13,
           iconK: 0.8, iconSW: 1.6, dayY: base + 25, daySize: 13, pillW: 30, pillH: 20, pillY: base + 10 });
         footer(svg, 24, 376, H - 42, H - 21, 12);
@@ -379,7 +383,7 @@
       // 800 x 240 and taller: today on the left, compact curve on the right
       wide: function (svg, H) {
         var D = V, e = H - 240;
-        txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
+        fit(txt(svg, 24, 40, D.station, { size: 18, weight: 600 }), 248);
         txt(svg, 24, 60, D.dateShort, { size: 14 });
         bigTemp(svg, 24, 150 + e / 2, 80, 196);
         icon(svg, D.now.icon, 222, 112 + e / 2, 1.5, 2.5);
@@ -394,8 +398,8 @@
       // 400 x 240 and taller: today only
       quadrant: function (svg, H) {
         var D = V, e = H - 240;
-        txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
-        txt(svg, 376, 40, D.dateShort, { size: 14, anchor: 'end' });
+        var date = txt(svg, 376, 40, D.dateShort, { size: 14, anchor: 'end' });
+        fit(txt(svg, 24, 40, D.station, { size: 18, weight: 600 }), 352 - date.getComputedTextLength() - 16);
         bigTemp(svg, 24, 118 + e / 3, 80, 320);
         icon(svg, D.now.icon, 347, 80 + e / 3, 1.5, 2.5);
         txt(svg, 376, 118 + e / 3, D.now.text, { size: 16, weight: 500, anchor: 'end' });
@@ -410,18 +414,20 @@
     function plan(view, w, h) {
       var aspect = w / h;
       if (view === 'full' && aspect >= 1.2) return ['full', 800, clamp(800 / aspect, 480, 680)];
-      if (view === 'full' && 400 / aspect >= 520) return ['portrait', 400, clamp(400 / aspect, 520, 760)];
+      if (view === 'full' && 400 / aspect >= 520) return ['portrait', 400, clamp(400 / aspect, 520, 1400)];
       if (view === 'half_horizontal' && aspect >= 2) return ['wide', 800, clamp(800 / aspect, 240, 400)];
       // A large half slot (TRMNL X in portrait) has room for the full design.
       if (view === 'half_horizontal' && aspect >= 1.2 && w >= 700) return ['full', 800, clamp(800 / aspect, 480, 680)];
       if (view !== 'full' && aspect >= 1) return ['quadrant', 400, clamp(400 / aspect, 240, 340)];
+      // A slot too tall for the list (half vertical in portrait) gets today and the curve.
+      if (400 / aspect > 760) return ['portrait', 400, clamp(400 / aspect, 520, 1400)];
       return ['list', 400, clamp(400 / aspect, 480, 760)];
     }
 
     function whenFonts(cb) {
       var done = false, go = function () { if (!done) { done = true; cb(); } };
       if (!document.fonts || !document.fonts.load) return go();
-      Promise.all([400, 500, 600].map(function (w) { return document.fonts.load(w + ' 16px "IBM Plex Sans"'); })).then(go, go);
+      Promise.all([400, 500, 600].map(function (w) { return document.fonts.load(w + ' 16px "Inter Variable"'); })).then(go, go);
       setTimeout(go, 4000);
     }
 
