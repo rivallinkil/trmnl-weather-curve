@@ -1,0 +1,8 @@
+# trmnlp build output
+_build/
+
+# trmnlp test --report output
+report/
+
+# Python bytecode from local transform runs
+__pycache__/

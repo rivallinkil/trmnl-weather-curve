@@ -1,0 +1,21 @@
+# TRMNLP configuration
+# {{ env.VARIABLE }} interpolation is available here
+---
+# auto-reload when files change (`watch: false` to disable)
+watch:
+  - .trmnlp.yml
+  - src
+
+# values of custom fields (defined in src/settings.yml)
+# Preview location: Berlin, or $TRMNL_LAT_LON ("lat,lon") when running the trmnl_preview gem directly.
+custom_fields:
+  lat_lon: '{{ env.TRMNL_LAT_LON | default: "52.5200,13.4050" }}'
+  location_name: ''
+  language: Auto
+  units: Celsius
+
+time_zone: Europe/Berlin
+
+# override variables
+variables:
+  trmnl: {}

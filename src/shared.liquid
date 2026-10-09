@@ -1,0 +1,400 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=block">
+
+<style>
+  .dwd-root { width: 100%; height: 100%; }
+  .dwd-svg { display: block; width: 100%; height: 100%; }
+  .dwd-empty { padding: 24px; font-family: 'IBM Plex Sans', sans-serif; font-size: 18px; }
+</style>
+
+{% assign dwd_fields = trmnl.plugin_settings.custom_fields_values %}
+{% comment %} TRMNL stores select values in lower case, e.g. "deutsch". {% endcomment %}
+{% assign dwd_lang = dwd_fields.language | default: "auto" | downcase %}
+{% assign dwd_units = dwd_fields.units | default: "celsius" | downcase %}
+{% if dwd_lang == "deutsch" %}
+  {% assign dwd_lang = "de" %}
+{% elsif dwd_lang == "english" %}
+  {% assign dwd_lang = "en" %}
+{% else %}
+  {% assign dwd_locale = trmnl.user.locale | default: "en" | slice: 0, 2 | downcase %}
+  {% if dwd_locale == "de" %}{% assign dwd_lang = "de" %}{% else %}{% assign dwd_lang = "en" %}{% endif %}
+{% endif %}
+
+<script>
+  window.DWD_DATA = {
+    days: {{ days | json }},
+    now: {{ now | json }},
+    station: {{ station | json }},
+    updated: {{ updated | json }}
+  };
+  window.DWD_CFG = {
+    lang: {{ dwd_lang | json }},
+    fahrenheit: {% if dwd_units == "fahrenheit" %}true{% else %}false{% endif %},
+    name: {{ dwd_fields.location_name | strip | json }}
+  };
+
+  (function () {
+    if (window.dwdDraw) return;
+    var NS = 'http://www.w3.org/2000/svg';
+    var FONT = "'IBM Plex Sans', sans-serif";
+    var GRAY = '#aaa';
+
+    function el(parent, tag, attrs) {
+      var n = document.createElementNS(NS, tag);
+      for (var k in attrs) n.setAttribute(k, attrs[k]);
+      parent.appendChild(n);
+      return n;
+    }
+    function rect(p, x, y, w, h, extra) {
+      var a = { x: x, y: y, width: w, height: h, fill: '#000' };
+      for (var k in extra) a[k] = extra[k];
+      return el(p, 'rect', a);
+    }
+    function txt(p, x, y, s, o) {
+      var t = el(p, 'text', { x: x, y: y, 'font-family': FONT, 'font-size': o.size, 'font-weight': o.weight || 400,
+        fill: o.fill || '#000', 'text-anchor': o.anchor || 'start' });
+      if (o.ls) t.setAttribute('letter-spacing', o.ls);
+      t.textContent = s;
+      return t;
+    }
+    function deg(t) { return t == null ? '–' : t + '°'; }
+    // Big current temperature at the design size; shrinks only if it would run into the icon.
+    function bigTemp(p, x, y, size, maxRight) {
+      var t = txt(p, x, y, deg(V.now.temp), { size: size, weight: 500, ls: -0.04 * size });
+      var w = t.getComputedTextLength();
+      if (x + w > maxRight) {
+        var s = size * (maxRight - x) / w;
+        t.setAttribute('font-size', s);
+        t.setAttribute('letter-spacing', -0.04 * s);
+      }
+      return t;
+    }
+
+    // Screens without gray (black/white, few-color e-ink) would drop #aaa entirely:
+    // there the rain area becomes a dot pattern and the day separators solid black.
+    var hasGray = !!document.querySelector('.screen--2bit, .screen--4bit, .screen--color-full');
+    function grayFill(svg) {
+      if (hasGray) return GRAY;
+      var id = svg.id + '-dots';
+      if (!svg.querySelector('#' + id)) {
+        var pat = el(el(svg, 'defs', {}), 'pattern', { id: id, width: 2, height: 2, patternUnits: 'userSpaceOnUse' });
+        rect(pat, 0, 0, 1, 1);
+      }
+      return 'url(#' + id + ')';
+    }
+
+    // ---- Language & units --------------------------------------------------------------------
+    var I18N = {
+      de: {
+        days: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
+        daysLong: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'],
+        months: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'],
+        monthsShort: ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'],
+        dateLong: function (d) { return this.daysLong[d.weekday] + ', ' + d.day + '. ' + this.months[d.month - 1]; },
+        dateShort: function (d) { return this.days[d.weekday] + ', ' + d.day + '. ' + this.monthsShort[d.month - 1]; },
+        high: 'HOCH', low: 'TIEF', rain: 'REGEN', tomorrow: 'MORGEN', legend: '100 % Regenrisiko',
+        updated: 'Aktualisiert', title: 'DWD Wetter',
+        cond: { 'clear-day': 'Sonnig', 'clear-night': 'Klar', 'partly-cloudy-day': 'Teils bewölkt',
+          'partly-cloudy-night': 'Teils bewölkt', 'partly-cloudy-rain': 'Schauer', 'cloudy': 'Bewölkt', 'fog': 'Nebel',
+          'wind': 'Windig', 'rain': 'Regen', 'sleet': 'Schneeregen', 'snow': 'Schnee', 'hail': 'Hagel', 'thunderstorm': 'Gewitter' }
+      },
+      en: {
+        days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        daysLong: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+        months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+        monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        dateLong: function (d) { return this.daysLong[d.weekday] + ', ' + this.months[d.month - 1] + ' ' + d.day; },
+        dateShort: function (d) { return this.days[d.weekday] + ', ' + this.monthsShort[d.month - 1] + ' ' + d.day; },
+        high: 'HIGH', low: 'LOW', rain: 'RAIN', tomorrow: 'TOMORROW', legend: '100 % chance of rain',
+        updated: 'Updated', title: 'DWD Weather',
+        cond: { 'clear-day': 'Sunny', 'clear-night': 'Clear', 'partly-cloudy-day': 'Partly cloudy',
+          'partly-cloudy-night': 'Partly cloudy', 'partly-cloudy-rain': 'Showers', 'cloudy': 'Cloudy', 'fog': 'Fog',
+          'wind': 'Windy', 'rain': 'Rain', 'sleet': 'Sleet', 'snow': 'Snow', 'hail': 'Hail', 'thunderstorm': 'Thunderstorm' }
+      }
+    };
+
+    // View model: the transform's neutral data (°C, unrounded) translated and converted once.
+    var V;
+    function buildModel() {
+      var D = DWD_DATA, C = window.DWD_CFG || {}, t = I18N[C.lang] || I18N.en;
+      var temp = function (c) { return c == null ? null : Math.round(C.fahrenheit ? c * 9 / 5 + 32 : c); };
+      var hm = (D.updated || '').substr(11, 5), h = parseInt(hm, 10);
+      var clock = !hm ? '' : !C.fahrenheit ? hm : ((h % 12) || 12) + hm.substr(2) + (h < 12 ? ' AM' : ' PM');
+      var first = D.days[0];
+      V = {
+        t: t,
+        days: D.days.map(function (d) {
+          return { label: t.days[d.weekday], high: temp(d.high), low: temp(d.low), rain: d.rain, icon: d.icon };
+        }),
+        now: { temp: temp(D.now.temp), icon: D.now.icon, text: t.cond[D.now.icon] || '' },
+        station: C.name || D.station,
+        dateLong: first ? t.dateLong(first) : '',
+        dateShort: first ? t.dateShort(first) : '',
+        updated: t.updated + ' ' + clock
+      };
+    }
+
+    // ---- Icons -------------------------------------------------------------------------------
+    // Geometry fitted to the design at chart size (k = 1), origin = icon anchor.
+    // cloud: [bottom, left x, left r, top x, top y, top r, right x, right r]
+    // sun: [x, y, r, ray start, ray end]; drops: [center x, spacing, top y, bottom y, slant]
+    var RAIN_CLOUD = [3.43, -5.82, 4.90, 0.53, -4.71, 6.46, 6.23, 4.52];
+    var RAIN_DROPS = [0.48, 5.16, 7.33, 11.14, 1.27];
+    var PARTLY_CLOUD = [10.0, -8.12, 4.24, -2.63, 2.95, 5.58, 2.30, 3.91];
+    var ICONS = {
+      'rain': { cloud: RAIN_CLOUD, drops: RAIN_DROPS },
+      'cloudy': { cloud: [8.75, -6.42, 5.26, 0.39, 0.88, 7.49, 6.77, 5.01] },
+      'partly-cloudy-day': { sun: [4.38, -4.38, 4.38, 6.98, 8.63], cloud: PARTLY_CLOUD },
+      'partly-cloudy-night': { moon: [4.6, -4.6, 5.4], cloud: PARTLY_CLOUD },
+      'partly-cloudy-rain': { sun: [5.0, -6.88, 3.75, 5.68, 7.42], cloud: [5.62, -8.12, 4.24, -2.63, -1.44, 5.58, 2.30, 3.91],
+        drops: [-1.87, 4.37, 9.44, 12.43, 1.19] },
+      'clear-day': { sun: [0, 0, 5.2, 8.2, 10.2] },
+      'clear-night': { moon: [0, 0, 8] },
+      'fog': { cloud: RAIN_CLOUD, lines: [[-7, 8.5, 7, 8.5], [-4, 12, 9, 12]] },
+      'wind': { paths: ['M-10 -4H4A3.5 3.5 0 1 0 0.5 -7.5', 'M-10 1.5H7A3.5 3.5 0 1 1 3.5 5', 'M-10 7H-1'] },
+      'snow': { cloud: RAIN_CLOUD, dots: [[-4.7, 9], [0.5, 11.5], [5.6, 9]] },
+      'sleet': { cloud: RAIN_CLOUD, drops: [0.48, 10.32, 7.33, 11.14, 1.27], dots: [[0.5, 9.5]] },
+      'hail': { cloud: RAIN_CLOUD, rings: [[-4.7, 9.3], [0.5, 11.8], [5.6, 9.3]] },
+      'thunderstorm': { cloud: RAIN_CLOUD, paths: ['M2 6L-1.5 10.5H2L-0.5 15'] }
+    };
+
+    function upperIntersection(a, b) {
+      var dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+      var l = (a.r * a.r - b.r * b.r + d * d) / (2 * d), h = Math.sqrt(Math.max(a.r * a.r - l * l, 0));
+      var mx = a.x + l * dx / d, my = a.y + l * dy / d;
+      var p = { x: mx + h * dy / d, y: my - h * dx / d }, q = { x: mx - h * dy / d, y: my + h * dx / d };
+      return p.y < q.y ? p : q;
+    }
+    function arcTo(c, from, to) { // clockwise on screen
+      var span = Math.atan2(to.y - c.y, to.x - c.x) - Math.atan2(from.y - c.y, from.x - c.x);
+      while (span < 0) span += 2 * Math.PI;
+      return 'A' + c.r + ' ' + c.r + ' 0 ' + (span > Math.PI ? 1 : 0) + ' 1 ' + to.x + ' ' + to.y;
+    }
+    function cloudPath(p) {
+      var L = { x: p[1], y: p[0] - p[2], r: p[2] }, T = { x: p[3], y: p[4], r: p[5] }, R = { x: p[6], y: p[0] - p[7], r: p[7] };
+      var start = { x: L.x, y: p[0] }, lt = upperIntersection(L, T), tr = upperIntersection(T, R), end = { x: R.x, y: p[0] };
+      return 'M' + start.x + ' ' + start.y + arcTo(L, start, lt) + arcTo(T, lt, tr) + arcTo(R, tr, end) + 'Z';
+    }
+    function moonPath(m) {
+      var o = { x: m[0], y: m[1], r: m[2] }, i = { x: m[0] + m[2] * 0.55, y: m[1] - m[2] * 0.45, r: m[2] * 0.8 };
+      var dx = i.x - o.x, dy = i.y - o.y, d = Math.hypot(dx, dy);
+      var l = (o.r * o.r - i.r * i.r + d * d) / (2 * d), h = Math.sqrt(o.r * o.r - l * l);
+      var mx = o.x + l * dx / d, my = o.y + l * dy / d;
+      var p = { x: mx + h * dy / d, y: my - h * dx / d }, q = { x: mx - h * dy / d, y: my + h * dx / d };
+      return 'M' + p.x + ' ' + p.y + 'A' + o.r + ' ' + o.r + ' 0 1 0 ' + q.x + ' ' + q.y +
+        'A' + i.r + ' ' + i.r + ' 0 0 1 ' + p.x + ' ' + p.y + 'Z';
+    }
+
+    function icon(svg, name, cx, cy, k, sw) {
+      var spec = ICONS[name] || ICONS['cloudy'];
+      var g = el(svg, 'g', { transform: 'translate(' + cx + ' ' + cy + ') scale(' + k + ')', fill: 'none', stroke: '#000',
+        'stroke-width': sw, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+      function add(tag, a) { a['vector-effect'] = 'non-scaling-stroke'; return el(g, tag, a); }
+      if (spec.sun) {
+        var s = spec.sun;
+        add('circle', { cx: s[0], cy: s[1], r: s[2] });
+        for (var i = 0; i < 8; i++) {
+          var a = i * Math.PI / 4, c = Math.cos(a), sn = Math.sin(a);
+          add('line', { x1: s[0] + c * s[3], y1: s[1] + sn * s[3], x2: s[0] + c * s[4], y2: s[1] + sn * s[4] });
+        }
+      }
+      if (spec.moon) add('path', { d: moonPath(spec.moon) });
+      if (spec.cloud) {
+        var d = cloudPath(spec.cloud);
+        if (spec.sun || spec.moon) add('path', { d: d, fill: '#fff', stroke: '#fff', 'stroke-width': sw + 0.6 });
+        add('path', { d: d, fill: '#fff' });
+      }
+      if (spec.drops) {
+        var r = spec.drops;
+        for (var j = -1; j <= 1; j++) {
+          var x = r[0] + j * r[1];
+          add('line', { x1: x + r[4] / 2, y1: r[2], x2: x - r[4] / 2, y2: r[3] });
+        }
+      }
+      (spec.lines || []).forEach(function (l) { add('line', { x1: l[0], y1: l[1], x2: l[2], y2: l[3] }); });
+      (spec.paths || []).forEach(function (p) { add('path', { d: p }); });
+      (spec.dots || []).forEach(function (p) { el(g, 'circle', { cx: p[0], cy: p[1], r: 1.3, fill: '#000', stroke: 'none' }); });
+      (spec.rings || []).forEach(function (p) { add('circle', { cx: p[0], cy: p[1], r: 1.4 }); });
+    }
+
+    // Rain drop: filled from 50 % chance of rain, outlined below.
+    function drop(svg, cx, cy, h, filled) {
+      var w = h * 0.735, top = cy - h / 2, rb = w / 2, cb = cy + h / 2 - rb;
+      var d = 'M' + cx + ' ' + top + 'C' + (cx + w * 0.12) + ' ' + (top + h * 0.22) + ' ' + (cx + rb) + ' ' + (cb - rb * 0.9) + ' ' +
+        (cx + rb) + ' ' + cb + 'A' + rb + ' ' + rb + ' 0 0 1 ' + (cx - rb) + ' ' + cb +
+        'C' + (cx - rb) + ' ' + (cb - rb * 0.9) + ' ' + (cx - w * 0.12) + ' ' + (top + h * 0.22) + ' ' + cx + ' ' + top + 'Z';
+      if (filled) el(svg, 'path', { d: d, fill: '#000' });
+      else el(svg, 'path', { d: d, fill: 'none', stroke: '#000', 'stroke-width': h * 0.11 });
+    }
+
+    // ---- Shared pieces -----------------------------------------------------------------------
+    function stats(svg, xs, labelY, valueY, size, day) {
+      [[V.t.high, deg(day.high)], [V.t.low, deg(day.low)], [V.t.rain, day.rain + '%']].forEach(function (s, i) {
+        txt(svg, xs[i], labelY, s[0], { size: 11, weight: 600, ls: 1 });
+        txt(svg, xs[i], valueY, s[1], { size: size, weight: 600 });
+      });
+    }
+    function footer(svg, x0, x1, ruleY, y, size) {
+      rect(svg, x0, ruleY, x1 - x0, 1);
+      txt(svg, x0, y, V.t.title, { size: size, weight: 500 });
+      txt(svg, x1, y, V.updated, { size: size, weight: 500, anchor: 'end' });
+    }
+
+    // Monotone cubic interpolation (same as d3.curveMonotoneX): flat runs stay flat, no overshoot.
+    function monotone(pts) {
+      var n = pts.length, t = new Array(n), i;
+      function sign(v) { return v < 0 ? -1 : 1; }
+      for (i = 1; i < n - 1; i++) {
+        var h0 = pts[i][0] - pts[i - 1][0], h1 = pts[i + 1][0] - pts[i][0];
+        var s0 = (pts[i][1] - pts[i - 1][1]) / h0, s1 = (pts[i + 1][1] - pts[i][1]) / h1, p = (s0 * h1 + s1 * h0) / (h0 + h1);
+        t[i] = (sign(s0) + sign(s1)) * Math.min(Math.abs(s0), Math.abs(s1), 0.5 * Math.abs(p)) || 0;
+      }
+      function edge(a, b, tb) { var h = b[0] - a[0]; return h ? (3 * (b[1] - a[1]) / h - tb) / 2 : tb; }
+      t[0] = edge(pts[0], pts[1], t[1] || 0);
+      t[n - 1] = edge(pts[n - 2], pts[n - 1], t[n - 2] || 0);
+      var d = 'M' + pts[0][0] + ' ' + pts[0][1];
+      for (i = 0; i < n - 1; i++) {
+        var dx = (pts[i + 1][0] - pts[i][0]) / 3;
+        d += 'C' + (pts[i][0] + dx) + ' ' + (pts[i][1] + dx * t[i]) + ' ' + (pts[i + 1][0] - dx) + ' ' +
+          (pts[i + 1][1] - dx * t[i + 1]) + ' ' + pts[i + 1][0] + ' ' + pts[i + 1][1];
+      }
+      return d;
+    }
+
+    // 7-day chart: highs, lows, chance of rain, one icon per day.
+    function chart(svg, days, g) {
+      var n = days.length, colW = (g.x1 - g.x0) / n;
+      var cx = function (i) { return g.x0 + colW * (i + 0.5); };
+      var highs = days.map(function (d) { return d.high; }), lows = days.map(function (d) { return d.low; });
+      var tmax = Math.max.apply(null, highs), tmin = Math.min.apply(null, lows);
+      var scale = (g.yMin - g.yMax) / ((tmax - tmin) || 1);
+      var ty = function (t) { return g.yMax + (tmax - t) * scale; };
+      var ry = function (p) { return g.base - p / 100 * (g.base - g.rainTop); };
+      var withEnds = function (ys) {
+        var pts = ys.map(function (y, i) { return [cx(i), y]; });
+        return [[g.x0, ys[0]]].concat(pts, [[g.x1, ys[n - 1]]]);
+      };
+
+      for (var i = 1; i < n; i++) {
+        var gx = Math.floor(g.x0 + colW * i) + 0.5;
+        el(svg, 'line', { x1: gx, y1: g.gridTop, x2: gx, y2: g.base, stroke: hasGray ? GRAY : '#000', 'stroke-width': 1 });
+      }
+
+      el(svg, 'path', { d: monotone(withEnds(days.map(function (d) { return ry(d.rain); }))) +
+        'L' + g.x1 + ' ' + g.base + 'L' + g.x0 + ' ' + g.base + 'Z', fill: grayFill(svg) });
+      for (var x = g.x0; x < g.x1; x += 4) rect(svg, x, g.rainTop, 1, 1);
+      if (g.legend) txt(svg, g.x1, g.rainTop - 6, V.t.legend, { size: 11, weight: 500, anchor: 'end' });
+      rect(svg, g.x0, g.base, g.x1 - g.x0, 1);
+
+      el(svg, 'path', { d: monotone(withEnds(highs.map(ty))), fill: 'none', stroke: '#000', 'stroke-width': g.hiW });
+      el(svg, 'path', { d: monotone(withEnds(lows.map(ty))), fill: 'none', stroke: '#000', 'stroke-width': g.loW });
+
+      days.forEach(function (d, i) {
+        var x = cx(i), yh = ty(d.high), yl = ty(d.low);
+        el(svg, 'circle', { cx: x, cy: yh, r: g.hiR, fill: '#fff', stroke: '#000', 'stroke-width': g.hiRW });
+        el(svg, 'circle', { cx: x, cy: yl, r: g.loR, fill: '#000' });
+        txt(svg, x, yh + g.hiOff, deg(d.high), { size: g.hiSize, weight: 600, anchor: 'middle' });
+        txt(svg, x, yl + g.loOff, deg(d.low), { size: g.loSize, weight: 500, anchor: 'middle' });
+        icon(svg, d.icon, x, g.iconY || (yh + yl) / 2, g.iconK, g.iconSW);
+        var label = txt(svg, x, g.dayY, d.label, { size: g.daySize, weight: 600, anchor: 'middle', fill: i === 0 ? '#fff' : '#000' });
+        if (i === 0) {
+          var pw = Math.max(g.pillW, label.getComputedTextLength() + g.pillH * 0.6);
+          svg.insertBefore(rect(svg, x - pw / 2, g.pillY, pw, g.pillH, { rx: g.pillH / 2 }), label);
+        }
+      });
+    }
+
+    // ---- Views -------------------------------------------------------------------------------
+    var VIEWS = {
+      full: function (svg) {
+        var D = V, t = D.days[0], m = D.days[1];
+        txt(svg, 24, 43, D.station, { size: 20, weight: 600 });
+        txt(svg, 24, 64, D.dateLong, { size: 14 });
+        bigTemp(svg, 24, 178, 112, 191);
+        icon(svg, D.now.icon, 223.0, 122.9, 2.068, 3.2);
+        txt(svg, 24, 213, D.now.text, { size: 18, weight: 500 });
+        stats(svg, [24, 104, 184], 249, 277, 22, t);
+        rect(svg, 24, 335, 232, 1);
+        if (m) {
+          txt(svg, 24, 359, D.t.tomorrow + ' · ' + m.label.toUpperCase(), { size: 11, weight: 600, ls: 1 });
+          icon(svg, m.icon, 44.0, 389.9, 1.32, 2.5);
+          txt(svg, 76, 399, deg(m.high) + ' / ' + deg(m.low), { size: 24, weight: 600 });
+          var pct = txt(svg, 256, 396, m.rain + '%', { size: 18, weight: 500, anchor: 'end' });
+          drop(svg, 256 - pct.getComputedTextLength() - 6.5 - 4.15, 389.35, 11.3, m.rain >= 50);
+        }
+        chart(svg, D.days, { x0: 296, x1: 776, gridTop: 48, base: 382, rainTop: 322, yMax: 88, yMin: 286, legend: true,
+          hiW: 2.5, loW: 1.5, hiR: 4.5, hiRW: 2, loR: 3.3, hiOff: -12, loOff: 24, hiSize: 17, loSize: 15,
+          iconK: 1, iconSW: 2, dayY: 409, daySize: 15, pillW: 34, pillH: 24, pillY: 392 });
+        footer(svg, 24, 776, 436, 458, 13);
+      },
+
+      half_vertical: function (svg) {
+        var D = V, t = D.days[0], rows = D.days.slice(1, 7);
+        txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
+        txt(svg, 376, 40, D.dateShort, { size: 14, anchor: 'end' });
+        bigTemp(svg, 24, 134, 96, 318);
+        icon(svg, D.now.icon, 347, 87.85, 1.826, 2.8);
+        txt(svg, 376, 133, D.now.text, { size: 16, weight: 500, anchor: 'end' });
+        stats(svg, [24, 144, 264], 166, 189, 20, t);
+        rect(svg, 24, 208, 352, 1);
+        var lo = Math.min.apply(null, rows.map(function (d) { return d.low; }));
+        var hi = Math.max.apply(null, rows.map(function (d) { return d.high; }));
+        var bx = function (v) { return 204 + (v - lo) * 132 / ((hi - lo) || 1); };
+        rows.forEach(function (d, i) {
+          var b = 235 + 32 * i;
+          txt(svg, 24, b, d.label, { size: 15, weight: 600 });
+          icon(svg, d.icon, 77, b - 6, 0.86, 1.75);
+          drop(svg, 114.5, b - 5.5, 9.6, d.rain >= 50);
+          txt(svg, 124, b, d.rain + '%', { size: 14, weight: 500 });
+          txt(svg, 194, b, deg(d.low), { size: 15, weight: 500, anchor: 'end' });
+          for (var x = 204; x < 336; x += 4) rect(svg, x, b - 7, 1, 2);
+          rect(svg, bx(d.low), b - 10, bx(d.high) - bx(d.low), 8, { rx: 4 });
+          txt(svg, 371.3, b, deg(d.high), { size: 15, weight: 600, anchor: 'end' });
+        });
+        footer(svg, 24, 376, 438, 459, 12);
+      },
+
+      half_horizontal: function (svg) {
+        var D = V;
+        txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
+        txt(svg, 24, 60, D.dateShort, { size: 14 });
+        bigTemp(svg, 24, 150, 80, 196);
+        icon(svg, D.now.icon, 222, 112, 1.5, 2.5);
+        txt(svg, 24, 182, D.now.text, { size: 16, weight: 500 });
+        txt(svg, 24, 214, D.updated, { size: 12, weight: 500 });
+        chart(svg, D.days, { x0: 296, x1: 776, gridTop: 40, base: 184, rainTop: 160, yMax: 68, yMin: 128, legend: false, iconY: 24,
+          hiW: 2, loW: 1.5, hiR: 3.5, hiRW: 1.75, loR: 2.6, hiOff: -9, loOff: 18, hiSize: 14, loSize: 12,
+          iconK: 0.75, iconSW: 1.6, dayY: 211, daySize: 14, pillW: 30, pillH: 21, pillY: 196 });
+      },
+
+      quadrant: function (svg) {
+        var D = V;
+        txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
+        txt(svg, 376, 40, D.dateShort, { size: 14, anchor: 'end' });
+        bigTemp(svg, 24, 118, 80, 320);
+        icon(svg, D.now.icon, 347, 80, 1.5, 2.5);
+        txt(svg, 376, 118, D.now.text, { size: 16, weight: 500, anchor: 'end' });
+        stats(svg, [24, 144, 264], 150, 173, 20, D.days[0]);
+        footer(svg, 24, 376, 196, 218, 12);
+      }
+    };
+
+    function whenFonts(cb) {
+      var done = false, go = function () { if (!done) { done = true; cb(); } };
+      if (!document.fonts || !document.fonts.load) return go();
+      Promise.all([400, 500, 600].map(function (w) { return document.fonts.load(w + ' 16px "IBM Plex Sans"'); })).then(go, go);
+      setTimeout(go, 4000);
+    }
+
+    window.dwdDraw = function () {
+      whenFonts(function () {
+        buildModel();
+        document.querySelectorAll('svg[data-dwd-view]').forEach(function (svg) {
+          if (svg.getAttribute('data-drawn')) return;
+          svg.setAttribute('data-drawn', '1');
+          VIEWS[svg.getAttribute('data-dwd-view')](svg);
+        });
+      });
+    };
+    document.addEventListener('DOMContentLoaded', window.dwdDraw);
+  })();
+</script>

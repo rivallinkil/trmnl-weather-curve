@@ -1,0 +1,70 @@
+#
+# Changes to this file will be overwritten by `trmnlp pull`.
+#
+# Docs: https://help.trmnl.com/en/articles/10542599-importing-and-exporting-private-plugins#h_581fb988f0
+#
+---
+strategy: polling
+no_screen_padding: 'yes'
+dark_mode: 'no'
+static_data: ''
+polling_verb: get
+framework_version: latest
+polling_url: 'https://api.brightsky.dev/weather?lat={{ lat_lon | split: "," | first | strip }}&lon={{ lat_lon | split: "," | last | strip }}&tz={{ trmnl.user.time_zone_iana | default: "Europe/Berlin" | url_encode }}&date={{ "now" | date: "%Y-%m-%d" }}&last_date={{ "now" | date: "%s" | plus: 691200 | date: "%Y-%m-%d" }}'
+polling_headers: ''
+name: Weather Curve (DWD)
+description: Temperature curve & rain, 7 days
+refresh_interval: 60
+custom_fields:
+  - keyname: lat_lon
+    field_type: lat_lon
+    name: Location
+    description: Search for a city or postal code, or enter coordinates as "lat,lon".
+    description-de: Ort oder Postleitzahl suchen, oder Koordinaten als "lat,lon" eingeben.
+    default: '52.5200,13.4050'
+  - keyname: location_name
+    field_type: string
+    name: Display name
+    description: Title shown on the screen. Leave empty to show the name of the nearest DWD forecast station.
+    description-de: Titel auf dem Bildschirm. Leer lassen, um den Namen der nächsten DWD-Vorhersagestation anzuzeigen.
+    placeholder: Berlin
+    optional: true
+  - keyname: language
+    field_type: select
+    name: Language
+    description: Auto follows the language of your TRMNL account.
+    description-de: Auto folgt der Sprache deines TRMNL-Kontos.
+    options:
+      - Auto
+      - Deutsch
+      - English
+    default: Auto
+  - keyname: units
+    field_type: select
+    name: Temperature unit
+    description: Fahrenheit also switches the clock to 12-hour time.
+    description-de: Fahrenheit stellt auch die Uhrzeit auf 12 Stunden um.
+    options:
+      - Celsius
+      - Fahrenheit
+    default: Celsius
+  - keyname: about
+    field_type: author_bio
+    name: About This Plugin
+    category: weather
+    github_url: https://github.com/samumatic/trmnl-weather-curve
+    description: >-
+      <p>Weather Curve shows the week ahead as one clean chart: a temperature curve for daily highs and lows,
+      a weather icon for every day, and the chance of rain as a shaded area along the bottom. On the left you see
+      the current temperature and today's high, low and rain chance, plus a short outlook for tomorrow. The design
+      is built for e-paper: large type, crisp lines, and a dot pattern instead of gray on black-and-white screens.</p>
+      <p>The forecast comes from the Deutscher Wetterdienst (DWD), Germany's national meteorological service. Its
+      MOSMIX forecast covers thousands of stations worldwide, so the plugin is not limited to Germany. Data is
+      provided through the free Bright Sky API, which means no account or API key is needed. Bright Sky picks the
+      nearest DWD station for your location, and the plugin refreshes hourly.</p>
+      <p>You can search for your location or enter coordinates, give it a custom display name, choose German or
+      English (or follow your account language), and switch between Celsius and Fahrenheit.</p>
+      <p>Weather Curve is open source. Feedback, bug reports and ideas are welcome on
+      <a href="https://github.com/samumatic/trmnl-weather-curve" class="underline" target="_blank">GitHub</a>.</p>
+      <p>Data: Deutscher Wetterdienst (CC BY 4.0) via Bright Sky. Not affiliated with or endorsed by the DWD.
+      Font: IBM Plex Sans.</p>

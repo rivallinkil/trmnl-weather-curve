@@ -1,0 +1,8 @@
+{% assign svg_id = "dwd-half_horizontal" | append_random %}
+<div class="dwd-root">
+  {% if days.size > 0 %}
+    <svg id="{{ svg_id }}" class="dwd-svg" data-dwd-view="half_horizontal" viewBox="0 0 800 240" preserveAspectRatio="xMidYMid meet"></svg>
+  {% else %}
+    <div class="dwd-empty">{% if dwd_lang == "de" %}Keine Wetterdaten verfügbar{% else %}No weather data available{% endif %}</div>
+  {% endif %}
+</div>
