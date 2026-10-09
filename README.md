@@ -4,9 +4,13 @@ A 7-day weather forecast for [TRMNL](https://trmnl.com) e-paper displays: one te
 
 ![Full layout](docs/full.png)
 
-| Half (vertical) | Half (horizontal) | Quadrant |
+| Portrait | TRMNL X | Half (vertical) |
 |---|---|---|
-| ![Half vertical](docs/half_vertical.png) | ![Half horizontal](docs/half_horizontal.png) | ![Quadrant](docs/quadrant.png) |
+| ![Portrait](docs/portrait.png) | ![TRMNL X](docs/trmnl-x.png) | ![Half vertical](docs/half_vertical.png) |
+
+| Half (horizontal) | Quadrant |
+|---|---|
+| ![Half horizontal](docs/half_horizontal.png) | ![Quadrant](docs/quadrant.png) |
 
 ## Features
 
@@ -15,7 +19,7 @@ A 7-day weather forecast for [TRMNL](https://trmnl.com) e-paper displays: one te
 - German or English labels (or follow the TRMNL account language)
 - Celsius or Fahrenheit (Fahrenheit also switches to a 12-hour clock)
 - Flat gray on grayscale screens, a dot pattern on black-and-white screens
-- All four TRMNL layouts: full, half horizontal, half vertical, quadrant
+- All four TRMNL layouts (full, half horizontal, half vertical, quadrant), adapting to portrait and to TRMNL X
 
 ## Data
 

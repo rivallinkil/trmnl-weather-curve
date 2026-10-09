@@ -92,7 +92,7 @@
         dateLong: function (d) { return this.daysLong[d.weekday] + ', ' + d.day + '. ' + this.months[d.month - 1]; },
         dateShort: function (d) { return this.days[d.weekday] + ', ' + d.day + '. ' + this.monthsShort[d.month - 1]; },
         high: 'HOCH', low: 'TIEF', rain: 'REGEN', tomorrow: 'MORGEN', legend: '100 % Regenrisiko',
-        updated: 'Aktualisiert', title: 'DWD Wetter',
+        updated: 'Aktualisiert', title: 'Weather Curve',
         cond: { 'clear-day': 'Sonnig', 'clear-night': 'Klar', 'partly-cloudy-day': 'Teils bewölkt',
           'partly-cloudy-night': 'Teils bewölkt', 'partly-cloudy-rain': 'Schauer', 'cloudy': 'Bewölkt', 'fog': 'Nebel',
           'wind': 'Windig', 'rain': 'Regen', 'sleet': 'Schneeregen', 'snow': 'Schnee', 'hail': 'Hagel', 'thunderstorm': 'Gewitter' }
@@ -105,7 +105,7 @@
         dateLong: function (d) { return this.daysLong[d.weekday] + ', ' + this.months[d.month - 1] + ' ' + d.day; },
         dateShort: function (d) { return this.days[d.weekday] + ', ' + this.monthsShort[d.month - 1] + ' ' + d.day; },
         high: 'HIGH', low: 'LOW', rain: 'RAIN', tomorrow: 'TOMORROW', legend: '100 % chance of rain',
-        updated: 'Updated', title: 'DWD Weather',
+        updated: 'Updated', title: 'Weather Curve',
         cond: { 'clear-day': 'Sunny', 'clear-night': 'Clear', 'partly-cloudy-day': 'Partly cloudy',
           'partly-cloudy-night': 'Partly cloudy', 'partly-cloudy-rain': 'Showers', 'cloudy': 'Cloudy', 'fog': 'Fog',
           'wind': 'Windy', 'rain': 'Rain', 'sleet': 'Sleet', 'snow': 'Snow', 'hail': 'Hail', 'thunderstorm': 'Thunderstorm' }
@@ -303,44 +303,67 @@
       });
     }
 
-    // ---- Views -------------------------------------------------------------------------------
-    var VIEWS = {
-      full: function (svg) {
-        var D = V, t = D.days[0], m = D.days[1];
+    // ---- Designs -----------------------------------------------------------------------------
+    // Each design has its own coordinate system (800 or 400 wide). H is the height that matches
+    // the screen's shape; the extra height (e) goes to the chart and the spacing, so TRMNL X and
+    // portrait screens are filled instead of letterboxed. At the base height (e = 0) every design
+    // is exactly the original layout.
+
+    // Today block shared by the list and portrait designs (y 0-208).
+    function todayBlock(svg) {
+      var D = V;
+      txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
+      txt(svg, 376, 40, D.dateShort, { size: 14, anchor: 'end' });
+      bigTemp(svg, 24, 134, 96, 318);
+      icon(svg, D.now.icon, 347, 87.85, 1.826, 2.8);
+      txt(svg, 376, 133, D.now.text, { size: 16, weight: 500, anchor: 'end' });
+      stats(svg, [24, 144, 264], 166, 189, 20, D.days[0]);
+      rect(svg, 24, 208, 352, 1);
+    }
+
+    var DESIGNS = {
+      // 800 x 480 and taller (TRMNL X)
+      full: function (svg, H) {
+        var D = V, t = D.days[0], m = D.days[1], e = H - 480;
         txt(svg, 24, 43, D.station, { size: 20, weight: 600 });
         txt(svg, 24, 64, D.dateLong, { size: 14 });
         bigTemp(svg, 24, 178, 112, 191);
         icon(svg, D.now.icon, 223.0, 122.9, 2.068, 3.2);
         txt(svg, 24, 213, D.now.text, { size: 18, weight: 500 });
         stats(svg, [24, 104, 184], 249, 277, 22, t);
-        rect(svg, 24, 335, 232, 1);
+        rect(svg, 24, 335 + e, 232, 1);
         if (m) {
-          txt(svg, 24, 359, D.t.tomorrow + ' · ' + m.label.toUpperCase(), { size: 11, weight: 600, ls: 1 });
-          icon(svg, m.icon, 44.0, 389.9, 1.32, 2.5);
-          txt(svg, 76, 399, deg(m.high) + ' / ' + deg(m.low), { size: 24, weight: 600 });
-          var pct = txt(svg, 256, 396, m.rain + '%', { size: 18, weight: 500, anchor: 'end' });
-          drop(svg, 256 - pct.getComputedTextLength() - 6.5 - 4.15, 389.35, 11.3, m.rain >= 50);
+          txt(svg, 24, 359 + e, D.t.tomorrow + ' · ' + m.label.toUpperCase(), { size: 11, weight: 600, ls: 1 });
+          icon(svg, m.icon, 44.0, 389.9 + e, 1.32, 2.5);
+          txt(svg, 76, 399 + e, deg(m.high) + ' / ' + deg(m.low), { size: 24, weight: 600 });
+          var pct = txt(svg, 256, 396 + e, m.rain + '%', { size: 18, weight: 500, anchor: 'end' });
+          drop(svg, 256 - pct.getComputedTextLength() - 6.5 - 4.15, 389.35 + e, 11.3, m.rain >= 50);
         }
-        chart(svg, D.days, { x0: 296, x1: 776, gridTop: 48, base: 382, rainTop: 322, yMax: 88, yMin: 286, legend: true,
-          hiW: 2.5, loW: 1.5, hiR: 4.5, hiRW: 2, loR: 3.3, hiOff: -12, loOff: 24, hiSize: 17, loSize: 15,
-          iconK: 1, iconSW: 2, dayY: 409, daySize: 15, pillW: 34, pillH: 24, pillY: 392 });
-        footer(svg, 24, 776, 436, 458, 13);
+        chart(svg, D.days, { x0: 296, x1: 776, gridTop: 48, base: 382 + e, rainTop: 322 + e * 0.75, yMax: 88,
+          yMin: 286 + e * 0.75, legend: true, hiW: 2.5, loW: 1.5, hiR: 4.5, hiRW: 2, loR: 3.3, hiOff: -12, loOff: 24,
+          hiSize: 17, loSize: 15, iconK: 1, iconSW: 2, dayY: 409 + e, daySize: 15, pillW: 34, pillH: 24, pillY: 392 + e });
+        footer(svg, 24, 776, 436 + e, 458 + e, 13);
       },
 
-      half_vertical: function (svg) {
-        var D = V, t = D.days[0], rows = D.days.slice(1, 7);
-        txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
-        txt(svg, 376, 40, D.dateShort, { size: 14, anchor: 'end' });
-        bigTemp(svg, 24, 134, 96, 318);
-        icon(svg, D.now.icon, 347, 87.85, 1.826, 2.8);
-        txt(svg, 376, 133, D.now.text, { size: 16, weight: 500, anchor: 'end' });
-        stats(svg, [24, 144, 264], 166, 189, 20, t);
-        rect(svg, 24, 208, 352, 1);
+      // 400 x 520+: today on top, the 7-day curve below (full view in portrait)
+      portrait: function (svg, H) {
+        var base = H - 86;
+        todayBlock(svg);
+        chart(svg, V.days, { x0: 24, x1: 376, gridTop: 222, base: base, rainTop: base - 40, yMax: 262, yMin: base - 78,
+          legend: false, hiW: 2, loW: 1.5, hiR: 3.5, hiRW: 1.75, loR: 2.6, hiOff: -10, loOff: 19, hiSize: 15, loSize: 13,
+          iconK: 0.8, iconSW: 1.6, dayY: base + 25, daySize: 13, pillW: 30, pillH: 20, pillY: base + 10 });
+        footer(svg, 24, 376, H - 42, H - 21, 12);
+      },
+
+      // 400 x 480 and taller: today plus a list of the next six days
+      list: function (svg, H) {
+        var e = H - 480, pitch = 32 + Math.min(e / 6, 16), rows = V.days.slice(1, 7);
+        todayBlock(svg);
         var lo = Math.min.apply(null, rows.map(function (d) { return d.low; }));
         var hi = Math.max.apply(null, rows.map(function (d) { return d.high; }));
         var bx = function (v) { return 204 + (v - lo) * 132 / ((hi - lo) || 1); };
         rows.forEach(function (d, i) {
-          var b = 235 + 32 * i;
+          var b = 235 + pitch * i;
           txt(svg, 24, b, d.label, { size: 15, weight: 600 });
           icon(svg, d.icon, 77, b - 6, 0.86, 1.75);
           drop(svg, 114.5, b - 5.5, 9.6, d.rain >= 50);
@@ -350,33 +373,50 @@
           rect(svg, bx(d.low), b - 10, bx(d.high) - bx(d.low), 8, { rx: 4 });
           txt(svg, 371.3, b, deg(d.high), { size: 15, weight: 600, anchor: 'end' });
         });
-        footer(svg, 24, 376, 438, 459, 12);
+        footer(svg, 24, 376, 438 + e, 459 + e, 12);
       },
 
-      half_horizontal: function (svg) {
-        var D = V;
+      // 800 x 240 and taller: today on the left, compact curve on the right
+      wide: function (svg, H) {
+        var D = V, e = H - 240;
         txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
         txt(svg, 24, 60, D.dateShort, { size: 14 });
-        bigTemp(svg, 24, 150, 80, 196);
-        icon(svg, D.now.icon, 222, 112, 1.5, 2.5);
-        txt(svg, 24, 182, D.now.text, { size: 16, weight: 500 });
-        txt(svg, 24, 214, D.updated, { size: 12, weight: 500 });
-        chart(svg, D.days, { x0: 296, x1: 776, gridTop: 40, base: 184, rainTop: 160, yMax: 68, yMin: 128, legend: false, iconY: 24,
-          hiW: 2, loW: 1.5, hiR: 3.5, hiRW: 1.75, loR: 2.6, hiOff: -9, loOff: 18, hiSize: 14, loSize: 12,
-          iconK: 0.75, iconSW: 1.6, dayY: 211, daySize: 14, pillW: 30, pillH: 21, pillY: 196 });
+        bigTemp(svg, 24, 150 + e / 2, 80, 196);
+        icon(svg, D.now.icon, 222, 112 + e / 2, 1.5, 2.5);
+        txt(svg, 24, 182 + e / 2, D.now.text, { size: 16, weight: 500 });
+        txt(svg, 24, 214 + e, D.updated, { size: 12, weight: 500 });
+        chart(svg, D.days, { x0: 296, x1: 776, gridTop: 40, base: 184 + e, rainTop: 160 + e * 0.75, yMax: 68,
+          yMin: 128 + e * 0.75, legend: false, iconY: 24, hiW: 2, loW: 1.5, hiR: 3.5, hiRW: 1.75, loR: 2.6, hiOff: -9,
+          loOff: 18, hiSize: 14, loSize: 12, iconK: 0.75, iconSW: 1.6, dayY: 211 + e, daySize: 14, pillW: 30, pillH: 21,
+          pillY: 196 + e });
       },
 
-      quadrant: function (svg) {
-        var D = V;
+      // 400 x 240 and taller: today only
+      quadrant: function (svg, H) {
+        var D = V, e = H - 240;
         txt(svg, 24, 40, D.station, { size: 18, weight: 600 });
         txt(svg, 376, 40, D.dateShort, { size: 14, anchor: 'end' });
-        bigTemp(svg, 24, 118, 80, 320);
-        icon(svg, D.now.icon, 347, 80, 1.5, 2.5);
-        txt(svg, 376, 118, D.now.text, { size: 16, weight: 500, anchor: 'end' });
-        stats(svg, [24, 144, 264], 150, 173, 20, D.days[0]);
-        footer(svg, 24, 376, 196, 218, 12);
+        bigTemp(svg, 24, 118 + e / 3, 80, 320);
+        icon(svg, D.now.icon, 347, 80 + e / 3, 1.5, 2.5);
+        txt(svg, 376, 118 + e / 3, D.now.text, { size: 16, weight: 500, anchor: 'end' });
+        stats(svg, [24, 144, 264], 150 + e * 2 / 3, 173 + e * 2 / 3, 20, D.days[0]);
+        footer(svg, 24, 376, 196 + e, 218 + e, 12);
       }
     };
+
+    // Picks [design, width, height] for a TRMNL view slot from its aspect ratio (width / height).
+    // Heights are clamped; anything beyond is centered by preserveAspectRatio.
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    function plan(view, w, h) {
+      var aspect = w / h;
+      if (view === 'full' && aspect >= 1.2) return ['full', 800, clamp(800 / aspect, 480, 680)];
+      if (view === 'full' && 400 / aspect >= 520) return ['portrait', 400, clamp(400 / aspect, 520, 760)];
+      if (view === 'half_horizontal' && aspect >= 2) return ['wide', 800, clamp(800 / aspect, 240, 400)];
+      // A large half slot (TRMNL X in portrait) has room for the full design.
+      if (view === 'half_horizontal' && aspect >= 1.2 && w >= 700) return ['full', 800, clamp(800 / aspect, 480, 680)];
+      if (view !== 'full' && aspect >= 1) return ['quadrant', 400, clamp(400 / aspect, 240, 340)];
+      return ['list', 400, clamp(400 / aspect, 480, 760)];
+    }
 
     function whenFonts(cb) {
       var done = false, go = function () { if (!done) { done = true; cb(); } };
@@ -391,7 +431,11 @@
         document.querySelectorAll('svg[data-dwd-view]').forEach(function (svg) {
           if (svg.getAttribute('data-drawn')) return;
           svg.setAttribute('data-drawn', '1');
-          VIEWS[svg.getAttribute('data-dwd-view')](svg);
+          var box = svg.parentNode.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+          var sized = box.width && box.height;
+          var p = plan(svg.getAttribute('data-dwd-view'), sized ? box.width : vb.width, sized ? box.height : vb.height);
+          svg.setAttribute('viewBox', '0 0 ' + p[1] + ' ' + p[2]);
+          DESIGNS[p[0]](svg, p[2]);
         });
       });
     };
