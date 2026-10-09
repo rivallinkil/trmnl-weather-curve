@@ -1,8 +1,10 @@
 {% assign svg_id = "dwd-full" | append_random %}
-<div class="dwd-root">
+<div class="w--full h--full">
   {% if days.size > 0 %}
-    <svg id="{{ svg_id }}" class="dwd-svg" data-dwd-view="full" viewBox="0 0 800 480" preserveAspectRatio="xMidYMid meet"></svg>
+    <svg id="{{ svg_id }}" class="block w--full h--full" data-dwd-view="full" viewBox="0 0 800 480" preserveAspectRatio="xMidYMid meet"></svg>
   {% else %}
-    <div class="dwd-empty">{% if dwd_lang == "de" %}Keine Wetterdaten verfügbar{% else %}No weather data available{% endif %}</div>
+    <div class="layout layout--col layout--center">
+      <span class="title">{% if dwd_lang == "de" %}Keine Wetterdaten verfügbar{% else %}No weather data available{% endif %}</span>
+    </div>
   {% endif %}
 </div>
