@@ -51,25 +51,25 @@ custom_fields:
   description: Auto follows the language of your TRMNL account.
   description-de: Auto folgt der Sprache deines TRMNL-Kontos.
   options:
-  - Auto: auto
-  - Deutsch: de
-  - English: en
-  default: auto
+  - Auto
+  - Deutsch
+  - English
+  default: Auto
 - keyname: units
   field_type: select
   name: Temperature unit
   description: Fahrenheit also switches the clock to 12-hour time.
   description-de: Fahrenheit stellt auch die Uhrzeit auf 12 Stunden um.
   options:
-  - Celsius: celsius
-  - Fahrenheit: fahrenheit
-  default: celsius
+  - Celsius
+  - Fahrenheit
+  default: Celsius
 - keyname: about
   field_type: author_bio
   name: About This Plugin
   category: environment,life
   github_url: https://github.com/samumatic/trmnl-weather-curve
-  description: 'Weather Curve displays the week ahead as a single, clear chart showing a temperature curve for daily highs and lows, a weather icon for each day and the likelihood of rain as a shaded area at the bottom. On the left, you can see the current temperature, today''s high and low temperatures, and the chance of rain, as well as a short outlook for tomorrow. The design is optimised for e-paper displays, featuring large text, crisp lines and a dot pattern instead of grey for monochrome screens.<br><br>The forecast comes from the Deutscher Wetterdienst (DWD), Germany''s national meteorological service. Its MOSMIX forecast covers thousands of stations worldwide, meaning the plugin is not limited to Germany. Data is provided via the free Bright Sky API, meaning no account or API key is required. Bright Sky selects the closest DWD station to your location and the plugin updates hourly.<br><br>You can search for your location or enter coordinates, give it a custom display name, select either German or English (or the language of your account) and switch between Celsius and Fahrenheit.<br><br>Weather Curve is open source. Feedback, bug reports and ideas are welcome on <a href="https://github.com/samumatic/trmnl-weather-curve" class="underline" target="_blank">GitHub</a>.<br><br>Data: Deutscher Wetterdienst (CC BY 4.0) via Bright Sky. We are not affiliated with or endorsed by the DWD.'
+  description: 'Weather Curve displays the week ahead as a single, clear chart showing a temperature curve for daily highs and lows, a weather icon for each day and the likelihood of rain as a shaded area at the bottom. On the left, you can see the current temperature, today''s high and low temperatures, and the chance of rain, as well as a short outlook for tomorrow. The design is optimised for e-paper displays, featuring large text, crisp lines and a dot pattern instead of grey for monochrome screens.<br><br>The forecast comes from the Deutscher Wetterdienst (DWD), Germany''s national meteorological service. Its MOSMIX forecast covers thousands of stations worldwide, meaning the plugin is not limited to Germany. Data is provided via the free Bright Sky API, meaning no account or API key is required. Bright Sky selects the closest DWD station to your location and the plugin updates hourly.<br><br>You can search for your location or enter coordinates, give it a custom display name, select either German or English (or the language of your account) and switch between Celsius and Fahrenheit.<br><br>Weather Curve is open source. Feedback, bug reports and ideas are welcome on <a href="https://github.com/samumatic/trmnl-weather-curve" class="underline" target="_blank">GitHub</a>.<br><br>Data: Deutscher Wetterdienst (CC BY 4.0) via Bright Sky. We are not affiliated with or endorsed by the DWD. Font: IBM Plex Sans.'
 name: Weather Curve (DWD)
 description: Temperature curve & rain, 7 days
 refresh_interval: 60
