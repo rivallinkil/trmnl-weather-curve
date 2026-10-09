@@ -44,18 +44,3 @@ jobs:
         with:
           name: snapshots
           path: tests/snapshots
-
-  push:
-    # Take test out of needs to push to TRMNL even when the tests fail.
-    needs: [lint, test]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "4.0"
-      - run: gem install trmnl_preview
-      - run: trmnlp push --force
-        env:
-          TRMNL_API_KEY: ${{ secrets.TRMNL_API_KEY }}
