@@ -286,10 +286,11 @@
         'L' + g.x1 + ' ' + g.base + 'L' + g.x0 + ' ' + g.base + 'Z', fill: grayFill(svg) });
       for (var x = g.x0; x < g.x1; x += 4) rect(svg, x, g.rainTop, 1, 1);
       if (g.legend) {
-        // Just under the dotted 100 % line, clear of the low temperatures above it; the halo keeps it readable on rain.
-        var legend = txt(svg, g.x1, g.rainTop + 14, V.t.legend, { size: 11, weight: 500, anchor: 'end' });
-        legend.setAttribute('stroke', PAPER); legend.setAttribute('stroke-width', 3);
-        legend.setAttribute('stroke-linejoin', 'round'); legend.setAttribute('paint-order', 'stroke');
+        // Just under the dotted 100 % line, clear of the low temperatures above it, on a paper label so
+        // that rain and day separators (solid on black-and-white screens) don't run through it.
+        var legend = txt(svg, g.x1 - 5, g.rainTop + 15, V.t.legend, { size: 11, weight: 500, anchor: 'end' });
+        var lw = legend.getComputedTextLength() + 10;
+        svg.insertBefore(rect(svg, g.x1 - lw, g.rainTop + 3, lw, 16, { fill: PAPER }), legend);
       }
       rect(svg, g.x0, g.base, g.x1 - g.x0, 1);
 
