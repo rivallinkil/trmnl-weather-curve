@@ -24,6 +24,8 @@
     var NS = 'http://www.w3.org/2000/svg';
     var FONT = "'Inter Variable', Inter, sans-serif";
     var GRAY = '#aaa';
+    // Dark mode (screen--dark-mode) turns the Framework's text white on black: ink follows the text color.
+    var INK = 'currentColor', PAPER = document.querySelector('.screen--dark-mode') ? '#000' : '#fff';
 
     function el(parent, tag, attrs) {
       var n = document.createElementNS(NS, tag);
@@ -32,13 +34,13 @@
       return n;
     }
     function rect(p, x, y, w, h, extra) {
-      var a = { x: x, y: y, width: w, height: h, fill: '#000' };
+      var a = { x: x, y: y, width: w, height: h, fill: INK };
       for (var k in extra) a[k] = extra[k];
       return el(p, 'rect', a);
     }
     function txt(p, x, y, s, o) {
       var t = el(p, 'text', { x: x, y: y, 'font-family': FONT, 'font-size': o.size, 'font-weight': o.weight || 400,
-        fill: o.fill || '#000', 'text-anchor': o.anchor || 'start' });
+        fill: o.fill || INK, 'text-anchor': o.anchor || 'start' });
       if (o.ls) t.setAttribute('letter-spacing', o.ls);
       t.textContent = s;
       return t;
@@ -66,7 +68,7 @@
     }
 
     // Screens without gray (black/white, few-color e-ink) would drop #aaa entirely:
-    // there the rain area becomes a dot pattern and the day separators solid black.
+    // there the rain area becomes a dot pattern and the day separators solid ink.
     var hasGray = !!document.querySelector('.screen--2bit, .screen--4bit, .screen--color-full');
     function grayFill(svg) {
       if (hasGray) return GRAY;
@@ -182,7 +184,7 @@
 
     function icon(svg, name, cx, cy, k, sw) {
       var spec = ICONS[name] || ICONS['cloudy'];
-      var g = el(svg, 'g', { transform: 'translate(' + cx + ' ' + cy + ') scale(' + k + ')', fill: 'none', stroke: '#000',
+      var g = el(svg, 'g', { transform: 'translate(' + cx + ' ' + cy + ') scale(' + k + ')', fill: 'none', stroke: INK,
         'stroke-width': sw, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
       function add(tag, a) { a['vector-effect'] = 'non-scaling-stroke'; return el(g, tag, a); }
       if (spec.sun) {
@@ -196,8 +198,8 @@
       if (spec.moon) add('path', { d: moonPath(spec.moon) });
       if (spec.cloud) {
         var d = cloudPath(spec.cloud);
-        if (spec.sun || spec.moon) add('path', { d: d, fill: '#fff', stroke: '#fff', 'stroke-width': sw + 0.6 });
-        add('path', { d: d, fill: '#fff' });
+        if (spec.sun || spec.moon) add('path', { d: d, fill: PAPER, stroke: PAPER, 'stroke-width': sw + 0.6 });
+        add('path', { d: d, fill: PAPER });
       }
       if (spec.drops) {
         var r = spec.drops;
@@ -208,7 +210,7 @@
       }
       (spec.lines || []).forEach(function (l) { add('line', { x1: l[0], y1: l[1], x2: l[2], y2: l[3] }); });
       (spec.paths || []).forEach(function (p) { add('path', { d: p }); });
-      (spec.dots || []).forEach(function (p) { el(g, 'circle', { cx: p[0], cy: p[1], r: 1.3, fill: '#000', stroke: 'none' }); });
+      (spec.dots || []).forEach(function (p) { el(g, 'circle', { cx: p[0], cy: p[1], r: 1.3, fill: INK, stroke: 'none' }); });
       (spec.rings || []).forEach(function (p) { add('circle', { cx: p[0], cy: p[1], r: 1.4 }); });
     }
 
@@ -218,8 +220,8 @@
       var d = 'M' + cx + ' ' + top + 'C' + (cx + w * 0.12) + ' ' + (top + h * 0.22) + ' ' + (cx + rb) + ' ' + (cb - rb * 0.9) + ' ' +
         (cx + rb) + ' ' + cb + 'A' + rb + ' ' + rb + ' 0 0 1 ' + (cx - rb) + ' ' + cb +
         'C' + (cx - rb) + ' ' + (cb - rb * 0.9) + ' ' + (cx - w * 0.12) + ' ' + (top + h * 0.22) + ' ' + cx + ' ' + top + 'Z';
-      if (filled) el(svg, 'path', { d: d, fill: '#000' });
-      else el(svg, 'path', { d: d, fill: 'none', stroke: '#000', 'stroke-width': h * 0.11 });
+      if (filled) el(svg, 'path', { d: d, fill: INK });
+      else el(svg, 'path', { d: d, fill: 'none', stroke: INK, 'stroke-width': h * 0.11 });
     }
 
     // ---- Shared pieces -----------------------------------------------------------------------
@@ -262,8 +264,13 @@
       var cx = function (i) { return g.x0 + colW * (i + 0.5); };
       var highs = days.map(function (d) { return d.high; }), lows = days.map(function (d) { return d.low; });
       var tmax = Math.max.apply(null, highs), tmin = Math.min.apply(null, lows);
-      var scale = (g.yMin - g.yMax) / ((tmax - tmin) || 1);
-      var ty = function (t) { return g.yMax + (tmax - t) * scale; };
+      var scale = (g.yMin - g.yMax) / ((tmax - tmin) || 1), top = g.yMax;
+      // Tall charts cap the degrees' height (maxScale px per degree) and center the curves, so small changes stay small.
+      if (g.maxScale && scale > g.maxScale) {
+        top += (g.yMin - g.yMax - (tmax - tmin) * g.maxScale) / 2;
+        scale = g.maxScale;
+      }
+      var ty = function (t) { return top + (tmax - t) * scale; };
       var ry = function (p) { return g.base - p / 100 * (g.base - g.rainTop); };
       var withEnds = function (ys) {
         var pts = ys.map(function (y, i) { return [cx(i), y]; });
@@ -272,26 +279,31 @@
 
       for (var i = 1; i < n; i++) {
         var gx = Math.floor(g.x0 + colW * i) + 0.5;
-        el(svg, 'line', { x1: gx, y1: g.gridTop, x2: gx, y2: g.base, stroke: hasGray ? GRAY : '#000', 'stroke-width': 1 });
+        el(svg, 'line', { x1: gx, y1: g.gridTop, x2: gx, y2: g.base, stroke: hasGray ? GRAY : INK, 'stroke-width': 1 });
       }
 
       el(svg, 'path', { d: monotone(withEnds(days.map(function (d) { return ry(d.rain); }))) +
         'L' + g.x1 + ' ' + g.base + 'L' + g.x0 + ' ' + g.base + 'Z', fill: grayFill(svg) });
       for (var x = g.x0; x < g.x1; x += 4) rect(svg, x, g.rainTop, 1, 1);
-      if (g.legend) txt(svg, g.x1, g.rainTop - 6, V.t.legend, { size: 11, weight: 500, anchor: 'end' });
+      if (g.legend) {
+        // Just under the dotted 100 % line, clear of the low temperatures above it; the halo keeps it readable on rain.
+        var legend = txt(svg, g.x1, g.rainTop + 14, V.t.legend, { size: 11, weight: 500, anchor: 'end' });
+        legend.setAttribute('stroke', PAPER); legend.setAttribute('stroke-width', 3);
+        legend.setAttribute('stroke-linejoin', 'round'); legend.setAttribute('paint-order', 'stroke');
+      }
       rect(svg, g.x0, g.base, g.x1 - g.x0, 1);
 
-      el(svg, 'path', { d: monotone(withEnds(highs.map(ty))), fill: 'none', stroke: '#000', 'stroke-width': g.hiW });
-      el(svg, 'path', { d: monotone(withEnds(lows.map(ty))), fill: 'none', stroke: '#000', 'stroke-width': g.loW });
+      el(svg, 'path', { d: monotone(withEnds(highs.map(ty))), fill: 'none', stroke: INK, 'stroke-width': g.hiW });
+      el(svg, 'path', { d: monotone(withEnds(lows.map(ty))), fill: 'none', stroke: INK, 'stroke-width': g.loW });
 
       days.forEach(function (d, i) {
         var x = cx(i), yh = ty(d.high), yl = ty(d.low);
-        el(svg, 'circle', { cx: x, cy: yh, r: g.hiR, fill: '#fff', stroke: '#000', 'stroke-width': g.hiRW });
-        el(svg, 'circle', { cx: x, cy: yl, r: g.loR, fill: '#000' });
+        el(svg, 'circle', { cx: x, cy: yh, r: g.hiR, fill: PAPER, stroke: INK, 'stroke-width': g.hiRW });
+        el(svg, 'circle', { cx: x, cy: yl, r: g.loR, fill: INK });
         txt(svg, x, yh + g.hiOff, deg(d.high), { size: g.hiSize, weight: 600, anchor: 'middle' });
         txt(svg, x, yl + g.loOff, deg(d.low), { size: g.loSize, weight: 500, anchor: 'middle' });
         icon(svg, d.icon, x, g.iconY || (yh + yl) / 2, g.iconK, g.iconSW);
-        var label = txt(svg, x, g.dayY, d.label, { size: g.daySize, weight: 600, anchor: 'middle', fill: i === 0 ? '#fff' : '#000' });
+        var label = txt(svg, x, g.dayY, d.label, { size: g.daySize, weight: 600, anchor: 'middle', fill: i === 0 ? PAPER : INK });
         if (i === 0) {
           var pw = Math.max(g.pillW, label.getComputedTextLength() + g.pillH * 0.6);
           svg.insertBefore(rect(svg, x - pw / 2, g.pillY, pw, g.pillH, { rx: g.pillH / 2 }), label);
@@ -347,7 +359,7 @@
         var base = H - 86, extra = Math.max(0, base - 78 - 262 - 420) / 2;
         todayBlock(svg);
         chart(svg, V.days, { x0: 24, x1: 376, gridTop: 222, base: base, rainTop: base - 40 - extra, yMax: 262 + extra,
-          yMin: base - 78 - extra,
+          yMin: base - 78 - extra, maxScale: 22,
           legend: false, hiW: 2, loW: 1.5, hiR: 3.5, hiRW: 1.75, loR: 2.6, hiOff: -10, loOff: 19, hiSize: 15, loSize: 13,
           iconK: 0.8, iconSW: 1.6, dayY: base + 25, daySize: 13, pillW: 30, pillH: 20, pillY: base + 10 });
         footer(svg, 24, 376, H - 42, H - 21, 12);
@@ -425,17 +437,30 @@
       setTimeout(go, 4000);
     }
 
+    // Draws a view for its slot's shape; an unsized slot gets the view's default shape until it has a size.
+    function draw(svg) {
+      var box = svg.parentNode.getBoundingClientRect(), sized = box.width && box.height;
+      if (!sized && svg.getAttribute('data-drawn')) return;
+      var vb = svg.dwdDefault || (svg.dwdDefault = [svg.viewBox.baseVal.width, svg.viewBox.baseVal.height]);
+      var p = plan(svg.getAttribute('data-dwd-view'), sized ? box.width : vb[0], sized ? box.height : vb[1]);
+      var key = p[0] + ' ' + Math.round(p[1]) + ' ' + Math.round(p[2]);
+      if (svg.getAttribute('data-drawn') === key) return;
+      svg.setAttribute('data-drawn', key);
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      svg.setAttribute('viewBox', '0 0 ' + p[1] + ' ' + p[2]);
+      DESIGNS[p[0]](svg, p[2]);
+    }
+
     window.dwdDraw = function () {
       whenFonts(function () {
         buildModel();
         document.querySelectorAll('svg[data-dwd-view]').forEach(function (svg) {
-          if (svg.getAttribute('data-drawn')) return;
-          svg.setAttribute('data-drawn', '1');
-          var box = svg.parentNode.getBoundingClientRect(), vb = svg.viewBox.baseVal;
-          var sized = box.width && box.height;
-          var p = plan(svg.getAttribute('data-dwd-view'), sized ? box.width : vb.width, sized ? box.height : vb.height);
-          svg.setAttribute('viewBox', '0 0 ' + p[1] + ' ' + p[2]);
-          DESIGNS[p[0]](svg, p[2]);
+          draw(svg);
+          // Redraw when the slot gets its real size later, e.g. a preview switched to portrait.
+          if (!svg.dwdObserved && window.ResizeObserver) {
+            svg.dwdObserved = true;
+            new ResizeObserver(function () { draw(svg); }).observe(svg.parentNode);
+          }
         });
       });
     };

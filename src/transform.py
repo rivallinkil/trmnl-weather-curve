@@ -49,15 +49,16 @@ def run(input):
     for w in rows:
         by_date.setdefault(w["_t"].date(), []).append(w)
 
-    # Start at local today; fall back to the first day in the data (e.g. canned test data).
+    # Full days only (skips the trailing partial day). Start at local today when a week follows it;
+    # otherwise (canned test data that has aged) start at the data's first day.
+    full = sorted(d for d in by_date if len(by_date[d]) >= 12)
     today = current["_t"].date() if current else None
-    dates = sorted(d for d in by_date if today is None or d >= today) or sorted(by_date)
+    ahead = [d for d in full if today and d >= today]
+    dates = ahead if len(ahead) >= DAYS else full
 
     days = []
     for d in dates:
         ws = by_date[d]
-        if len(ws) < 12:  # skip the trailing partial day
-            continue
         temps = [w["temperature"] for w in ws if w.get("temperature") is not None]
         probs = [w[k] for w in ws for k in ("precipitation_probability", "precipitation_probability_6h")
                  if w.get(k) is not None]
