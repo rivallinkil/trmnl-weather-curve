@@ -317,6 +317,26 @@
     // portrait screens are filled instead of letterboxed. At the base height (e = 0) every design
     // is exactly the original layout.
 
+    // The next six days as rows (day, icon, chance of rain, low-high bar); first baseline at y0.
+    function dayRows(svg, y0, pitch) {
+      var rows = V.days.slice(1, 7);
+      var lo = Math.min.apply(null, rows.map(function (d) { return d.low; }));
+      var hi = Math.max.apply(null, rows.map(function (d) { return d.high; }));
+      var bx = function (v) { return 204 + (v - lo) * 132 / ((hi - lo) || 1); };
+      rows.forEach(function (d, i) {
+        var b = y0 + pitch * i;
+        txt(svg, 24, b, d.label, { size: 15, weight: 600 });
+        icon(svg, d.icon, 77, b - 6, 0.86, 1.75);
+        drop(svg, 114.5, b - 5.5, 9.6, d.rain >= 50);
+        txt(svg, 124, b, d.rain + '%', { size: 14, weight: 500 });
+        txt(svg, 194, b, deg(d.low), { size: 15, weight: 500, anchor: 'end' });
+        for (var x = 204; x < 336; x += 4) rect(svg, x, b - 7, 1, 2);
+        rect(svg, bx(d.low), b - 10, bx(d.high) - bx(d.low), 8, { rx: 4 });
+        txt(svg, 371.3, b, deg(d.high), { size: 15, weight: 600, anchor: 'end' });
+      });
+      return y0 + pitch * (rows.length - 1);
+    }
+
     // Today block shared by the list and portrait designs (y 0-208).
     function todayBlock(svg) {
       var D = V;
@@ -328,6 +348,9 @@
       stats(svg, [24, 144, 264], 166, 189, 20, D.days[0]);
       rect(svg, 24, 208, 352, 1);
     }
+
+    // Height from which the portrait design also lists the next six days.
+    var TALL = 860;
 
     var DESIGNS = {
       // 800 x 480 and taller (TRMNL X)
@@ -354,12 +377,18 @@
       },
 
       // 400 x 520+: today on top, the 7-day curve below (full view in portrait, tall half views).
-      // The curve spans at most 420; taller screens give the rest to the rain area and headroom.
+      // Very tall slots (TALL+) add the six-day list between them. The curve spans at most 420;
+      // taller screens give the rest to the rain area and headroom.
       portrait: function (svg, H) {
-        var base = H - 86, extra = Math.max(0, base - 78 - 262 - 420) / 2;
+        var top = 208, base = H - 86;
         todayBlock(svg);
-        chart(svg, V.days, { x0: 24, x1: 376, gridTop: 222, base: base, rainTop: base - 40 - extra, yMax: 262 + extra,
-          yMin: base - 78 - extra, maxScale: 22,
+        if (H >= TALL) {
+          top = dayRows(svg, 235, 34) + 22;
+          rect(svg, 24, top, 352, 1);
+        }
+        var gridTop = top + 14, extra = Math.max(0, base - 78 - (gridTop + 40) - 420) / 2;
+        chart(svg, V.days, { x0: 24, x1: 376, gridTop: gridTop, base: base, rainTop: base - 40 - extra,
+          yMax: gridTop + 40 + extra, yMin: base - 78 - extra, maxScale: 22,
           legend: false, hiW: 2, loW: 1.5, hiR: 3.5, hiRW: 1.75, loR: 2.6, hiOff: -10, loOff: 19, hiSize: 15, loSize: 13,
           iconK: 0.8, iconSW: 1.6, dayY: base + 25, daySize: 13, pillW: 30, pillH: 20, pillY: base + 10 });
         footer(svg, 24, 376, H - 42, H - 21, 12);
@@ -367,22 +396,9 @@
 
       // 400 x 480 and taller: today plus a list of the next six days
       list: function (svg, H) {
-        var e = H - 480, pitch = 32 + Math.min(e / 6, 16), rows = V.days.slice(1, 7);
+        var e = H - 480;
         todayBlock(svg);
-        var lo = Math.min.apply(null, rows.map(function (d) { return d.low; }));
-        var hi = Math.max.apply(null, rows.map(function (d) { return d.high; }));
-        var bx = function (v) { return 204 + (v - lo) * 132 / ((hi - lo) || 1); };
-        rows.forEach(function (d, i) {
-          var b = 235 + pitch * i;
-          txt(svg, 24, b, d.label, { size: 15, weight: 600 });
-          icon(svg, d.icon, 77, b - 6, 0.86, 1.75);
-          drop(svg, 114.5, b - 5.5, 9.6, d.rain >= 50);
-          txt(svg, 124, b, d.rain + '%', { size: 14, weight: 500 });
-          txt(svg, 194, b, deg(d.low), { size: 15, weight: 500, anchor: 'end' });
-          for (var x = 204; x < 336; x += 4) rect(svg, x, b - 7, 1, 2);
-          rect(svg, bx(d.low), b - 10, bx(d.high) - bx(d.low), 8, { rx: 4 });
-          txt(svg, 371.3, b, deg(d.high), { size: 15, weight: 600, anchor: 'end' });
-        });
+        dayRows(svg, 235, 32 + Math.min(e / 6, 16));
         footer(svg, 24, 376, 438 + e, 459 + e, 12);
       },
 
