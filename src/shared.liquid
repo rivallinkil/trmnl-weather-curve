@@ -6,6 +6,43 @@
   {% if dwd_locale == "de" %}{% assign dwd_lang = "de" %}{% else %}{% assign dwd_lang = "en" %}{% endif %}
 {% endif %}
 
+{% comment %} No forecast (API down or empty): a sleeping cloud and one of three lines, changing daily. {% endcomment %}
+{% assign dwd_joke = "now" | date: "%j" | plus: 0 | modulo: 3 %}
+{% if dwd_lang == "de" %}
+  {% case dwd_joke %}
+    {% when 0 %}{% assign dwd_empty_title = "Die Vorhersage hält ein Nickerchen" %}{% assign dwd_empty_text = "Bright Sky antwortet gerade nicht. Bis sie aufwacht, hilft ein Blick aus dem Fenster." %}
+    {% when 1 %}{% assign dwd_empty_title = "Wetter nicht gefunden" %}{% assign dwd_empty_text = "Draußen ist es trotzdem. Beim nächsten Aktualisieren versuchen wir es wieder." %}
+    {% else %}{% assign dwd_empty_title = "Wolken in der Leitung" %}{% assign dwd_empty_text = "Diesmal kam keine Vorhersage durch. Nächster Versuch beim nächsten Aktualisieren." %}
+  {% endcase %}
+{% else %}
+  {% case dwd_joke %}
+    {% when 0 %}{% assign dwd_empty_title = "The forecast is taking a nap" %}{% assign dwd_empty_text = "Bright Sky isn’t answering right now. Until it wakes up, the window works too." %}
+    {% when 1 %}{% assign dwd_empty_title = "Weather not found" %}{% assign dwd_empty_text = "It’s still out there, though. We’ll try again at the next refresh." %}
+    {% else %}{% assign dwd_empty_title = "Clouds in the cable" %}{% assign dwd_empty_text = "No forecast came through this time. Next try at the next refresh." %}
+  {% endcase %}
+{% endif %}
+{% capture dwd_empty %}
+  <div class="dwd-empty">
+    <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M24 54H70A14 14 0 0 0 70 26A20 20 0 0 0 32 26A14 14 0 0 0 24 54Z"/>
+      <path d="M38 41q4 4 8 0M54 41q4 4 8 0"/>
+      <path d="M76 6h8l-8 9h8M66 17h5l-5 6h5" stroke-width="2.5"/>
+    </svg>
+    <p class="dwd-empty__title">{{ dwd_empty_title }}</p>
+    <p class="dwd-empty__text">{{ dwd_empty_text }}</p>
+  </div>
+{% endcapture %}
+<style>
+  /* Sized from the slot (container units), solid text only: gray text breaks up on black-and-white screens. */
+  .dwd-empty{container-type:size;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:2.5cqmin;padding:0 8cqw;box-sizing:border-box;text-align:center;
+    font-family:'Inter Variable',Inter,sans-serif}
+  .dwd-empty p{margin:0}
+  .dwd-empty svg{width:clamp(72px,26cqmin,200px);height:auto}
+  .dwd-empty__title{font-size:clamp(17px,6.5cqmin,40px);line-height:1.2;font-weight:600;text-wrap:balance}
+  .dwd-empty__text{font-size:clamp(13px,3.8cqmin,22px);line-height:1.35;font-weight:500;max-width:30em;text-wrap:balance}
+</style>
+
 <script>
   window.DWD_DATA = {
     days: {{ days | json }},
@@ -238,7 +275,9 @@
     }
 
     // Monotone cubic interpolation (same as d3.curveMonotoneX): flat runs stay flat, no overshoot.
-    function monotone(pts) {
+    // vertical: points are [y, x] and the curve runs down the page (d3.curveMonotoneY).
+    function monotone(pts, vertical) {
+      var P = vertical ? function (a, b) { return b + ' ' + a; } : function (a, b) { return a + ' ' + b; };
       var n = pts.length, t = new Array(n), i;
       function sign(v) { return v < 0 ? -1 : 1; }
       for (i = 1; i < n - 1; i++) {
@@ -249,11 +288,11 @@
       function edge(a, b, tb) { var h = b[0] - a[0]; return h ? (3 * (b[1] - a[1]) / h - tb) / 2 : tb; }
       t[0] = edge(pts[0], pts[1], t[1] || 0);
       t[n - 1] = edge(pts[n - 2], pts[n - 1], t[n - 2] || 0);
-      var d = 'M' + pts[0][0] + ' ' + pts[0][1];
+      var d = 'M' + P(pts[0][0], pts[0][1]);
       for (i = 0; i < n - 1; i++) {
         var dx = (pts[i + 1][0] - pts[i][0]) / 3;
-        d += 'C' + (pts[i][0] + dx) + ' ' + (pts[i][1] + dx * t[i]) + ' ' + (pts[i + 1][0] - dx) + ' ' +
-          (pts[i + 1][1] - dx * t[i + 1]) + ' ' + pts[i + 1][0] + ' ' + pts[i + 1][1];
+        d += 'C' + P(pts[i][0] + dx, pts[i][1] + dx * t[i]) + ' ' + P(pts[i + 1][0] - dx, pts[i + 1][1] - dx * t[i + 1]) +
+          ' ' + P(pts[i + 1][0], pts[i + 1][1]);
       }
       return d;
     }
@@ -350,7 +389,7 @@
       rect(svg, 24, 208, 352, 1);
     }
 
-    // Height from which the portrait design also lists the next six days.
+    // Design height from which a slot is too tall for a curve across it: the column design turns it sideways.
     var TALL = 860;
 
     var DESIGNS = {
@@ -377,21 +416,50 @@
         footer(svg, 24, 776, 436 + e, 458 + e, 13);
       },
 
-      // 400 x 520+: today on top, the 7-day curve below (full view in portrait, tall half views).
-      // Very tall slots (TALL+) add the six-day list between them. The curve spans at most 420;
-      // taller screens give the rest to the rain area and headroom.
+      // 400 x 520 to TALL: today on top, the 7-day curve below (full view in portrait).
+      // The curve spans at most 420; taller screens give the rest to the rain area and headroom.
       portrait: function (svg, H) {
-        var top = 208, base = H - 86;
+        var base = H - 86, extra = Math.max(0, base - 78 - 262 - 420) / 2;
         todayBlock(svg);
-        if (H >= TALL) {
-          top = dayRows(svg, 235, 34) + 22;
-          rect(svg, 24, top, 352, 1);
-        }
-        var gridTop = top + 14, extra = Math.max(0, base - 78 - (gridTop + 40) - 420) / 2;
-        chart(svg, V.days, { x0: 24, x1: 376, gridTop: gridTop, base: base, rainTop: base - 40 - extra,
-          yMax: gridTop + 40 + extra, yMin: base - 78 - extra, maxScale: 22,
+        chart(svg, V.days, { x0: 24, x1: 376, gridTop: 222, base: base, rainTop: base - 40 - extra, yMax: 262 + extra,
+          yMin: base - 78 - extra, maxScale: 22,
           legend: false, hiW: 2, loW: 1.5, hiR: 3.5, hiRW: 1.75, loR: 2.6, hiOff: -10, loOff: 19, hiSize: 15, loSize: 13,
           iconK: 0.8, iconSW: 1.6, dayY: base + 25, daySize: 13, pillW: 30, pillH: 20, pillY: base + 10 });
+        footer(svg, 24, 376, H - 42, H - 21, 12);
+      },
+
+      // 400 x TALL+ (half views in portrait): the curve turned sideways. Days run down the page, one row
+      // each (day, icon, chance of rain); highs and lows are plotted across and joined from row to row.
+      column: function (svg, H) {
+        var days = V.days, n = days.length, top = 222, bottom = H - 56, pitch = (bottom - top) / n;
+        var cy = function (i) { return top + pitch * (i + 0.5); };
+        var highs = days.map(function (d) { return d.high; }), lows = days.map(function (d) { return d.low; });
+        var tmax = Math.max.apply(null, highs), tmin = Math.min.apply(null, lows);
+        // Temperature axis 214-338, at most 14 px per degree (centered), labels outside the points.
+        var scale = 124 / ((tmax - tmin) || 1), left = 214;
+        if (scale > 14) { left += (124 - (tmax - tmin) * 14) / 2; scale = 14; }
+        var tx = function (t) { return left + (t - tmin) * scale; };
+        var withEnds = function (xs) {
+          return [[top, xs[0]]].concat(xs.map(function (x, i) { return [cy(i), x]; }), [[bottom, xs[n - 1]]]);
+        };
+        todayBlock(svg);
+        el(svg, 'path', { d: monotone(withEnds(highs.map(tx)), true), fill: 'none', stroke: INK, 'stroke-width': 2.5 });
+        el(svg, 'path', { d: monotone(withEnds(lows.map(tx)), true), fill: 'none', stroke: INK, 'stroke-width': 1.5 });
+        days.forEach(function (d, i) {
+          var y = cy(i), b = y + 5, xh = tx(d.high), xl = tx(d.low);
+          var label = txt(svg, 40, b, d.label, { size: 15, weight: 600, anchor: 'middle', fill: i === 0 ? PAPER : INK });
+          if (i === 0) {
+            var pw = Math.max(34, label.getComputedTextLength() + 14);
+            svg.insertBefore(rect(svg, 40 - pw / 2, y - 11, pw, 22, { rx: 11 }), label);
+          }
+          icon(svg, d.icon, 82, y - 1, 0.9, 1.8);
+          drop(svg, 116.5, y - 0.5, 9.6, d.rain >= 50);
+          txt(svg, 126, b, d.rain + '%', { size: 14, weight: 500 });
+          el(svg, 'circle', { cx: xh, cy: y, r: 4.5, fill: PAPER, stroke: INK, 'stroke-width': 2 });
+          el(svg, 'circle', { cx: xl, cy: y, r: 3.3, fill: INK });
+          txt(svg, xl - 9, b, deg(d.low), { size: 15, weight: 500, anchor: 'end' });
+          txt(svg, xh + 9, b, deg(d.high), { size: 16, weight: 600 });
+        });
         footer(svg, 24, 376, H - 42, H - 21, 12);
       },
 
@@ -437,12 +505,14 @@
     function plan(view, w, h) {
       var aspect = w / h;
       if (view === 'full' && aspect >= 1.2) return ['full', 800, clamp(800 / aspect, 480, 680)];
+      if (view === 'full' && 400 / aspect >= TALL) return ['column', 400, clamp(400 / aspect, TALL, 1400)];
       if (view === 'full' && 400 / aspect >= 520) return ['portrait', 400, clamp(400 / aspect, 520, 1400)];
       if (view === 'half_horizontal' && aspect >= 2) return ['wide', 800, clamp(800 / aspect, 240, 400)];
       // A large half slot (TRMNL X in portrait) has room for the full design.
       if (view === 'half_horizontal' && aspect >= 1.2 && w >= 700) return ['full', 800, clamp(800 / aspect, 480, 680)];
       if (view !== 'full' && aspect >= 1) return ['quadrant', 400, clamp(400 / aspect, 240, 340)];
-      // A slot too tall for the list (half vertical in portrait) gets today and the curve.
+      // Very tall slots (half vertical in portrait) get the curve sideways; tall ones today and the curve.
+      if (400 / aspect >= TALL) return ['column', 400, clamp(400 / aspect, TALL, 1400)];
       if (400 / aspect > 760) return ['portrait', 400, clamp(400 / aspect, 520, 1400)];
       return ['list', 400, clamp(400 / aspect, 480, 760)];
     }
