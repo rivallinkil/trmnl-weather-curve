@@ -4,6 +4,8 @@
 
 A 7-day weather forecast for [TRMNL](https://trmnl.com) e-paper displays: one temperature curve for daily highs and lows, a weather icon per day, and the chance of rain as an area along the bottom.
 
+**[Install on TRMNL](https://trmnl.com/recipes/weather-curve-dwd-500572)**
+
 ![Full layout](docs/full.png)
 
 | Portrait | TRMNL X | Half (vertical) |
