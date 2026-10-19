@@ -22,10 +22,10 @@ custom_fields:
   default: 52.5200,13.4050
 - keyname: location_name
   field_type: string
-  name: Display name
-  description: Title shown on the screen. Leave empty to show the name of the nearest DWD forecast station, if the DWD is the data source.
-  description-de: Titel auf dem Bildschirm. Leer lassen, um den Namen der nächsten DWD-Vorhersagestation anzuzeigen, wenn der DWD die Datenquelle ist.
-  placeholder: Berlin
+  name: Location name
+  description: Shown as the title, for example your city. Open-Meteo sends no place name, so set one here. Left empty, the title shows the nearest DWD station (Europe only).
+  description-de: Wird als Titel angezeigt, zum Beispiel deine Stadt. Open-Meteo liefert keinen Ortsnamen, also trag hier einen ein. Leer gelassen zeigt der Titel die nächste DWD-Station (nur in Europa).
+  placeholder: New York
   optional: true
 - keyname: language
   field_type: select
