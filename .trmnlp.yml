@@ -14,6 +14,7 @@ custom_fields:
   language: Auto
   units: Celsius
   data_source: Auto
+  show_uv: false
 
 time_zone: Europe/Berlin
 

@@ -4,6 +4,8 @@ Condenses hourly forecast data (~190 rows) into 7 daily rows.
 Input: the polled response of either source, told apart by its shape:
   Bright Sky (DWD)  {weather: [...], sources: [...]}
   Open-Meteo        {hourly: {time: [...], ...}, current: {...}, utc_offset_seconds: ...}
+With the optional UV index, TRMNL wraps several polling URLs as {IDX_0: forecast, IDX_1: Open-Meteo UV}; a
+single URL arrives unwrapped. UV is read from any response with {daily: {time: [...], uv_index_max: [...]}}.
 Output: the same for both. Language- and unit-neutral data (°C, unrounded; weekday as 0 = Monday);
 the views translate labels and convert units. A day without any rain data has rain: None.
 """
@@ -115,7 +117,26 @@ def rows_open_meteo(input):
     return rows, now, ""
 
 
+def uv_by_date(*responses):
+    """Daily UV index maximum by ISO date, rounded to an integer. Empty when a response has none."""
+    uv = {}
+    for r in responses:
+        d = r.get("daily") if isinstance(r, dict) else None
+        if not isinstance(d, dict):
+            continue
+        for ts, value in zip(d.get("time") or [], d.get("uv_index_max") or []):
+            if isinstance(value, (int, float)):
+                uv[str(ts)[:10]] = int(value + 0.5)
+    return uv
+
+
 def run(input):
+    uv = {}
+    if "IDX_0" in input:
+        uv = uv_by_date(*(input[k] for k in sorted(input) if k.startswith("IDX_")))
+        input = input["IDX_0"] if isinstance(input["IDX_0"], dict) else {}
+    else:
+        uv = uv_by_date(input)
     if isinstance(input.get("hourly"), dict):
         source = "open-meteo"
         rows, now, station = rows_open_meteo(input)
@@ -149,6 +170,8 @@ def run(input):
             # None: the source has no rain forecast for this day (the views then draw no rain).
             "rain": max(probs) if probs else None,
             "icon": day_icon([w for w in ws if w["_t"].hour in DAY_HOURS]),
+            # None: UV index not requested or not delivered (Bright Sky has none).
+            "uv": uv.get(d.isoformat()),
         })
         if len(days) == DAYS:
             break

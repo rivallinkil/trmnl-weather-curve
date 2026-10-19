@@ -54,6 +54,7 @@
   window.DWD_CFG = {
     lang: {{ dwd_lang | json }},
     fahrenheit: {% if dwd_units == "fahrenheit" %}true{% else %}false{% endif %},
+    uv: {% if dwd_fields.show_uv == "true" %}true{% else %}false{% endif %},
     name: {{ dwd_fields.location_name | strip | json }}
   };
 
@@ -161,7 +162,7 @@
       V = {
         t: t,
         days: D.days.map(function (d) {
-          return { label: t.days[d.weekday], high: temp(d.high), low: temp(d.low), rain: d.rain, icon: d.icon };
+          return { label: t.days[d.weekday], high: temp(d.high), low: temp(d.low), rain: d.rain, icon: d.icon, uv: d.uv };
         }),
         now: { temp: temp(D.now.temp), icon: D.now.icon, text: t.cond[D.now.icon] || '' },
         station: C.name || D.station || (D.source === 'open-meteo' ? 'Open-Meteo' : ''),
@@ -170,6 +171,8 @@
         dateLong: first ? t.dateLong(first) : '',
         dateShort: first ? t.dateShort(first) : '',
         updated: t.updated + ' ' + clock,
+        // Opt-in UV index (Open-Meteo only); shown for today from index 3 (moderate) up.
+        uvOn: !!C.uv,
         hasRain: D.days.some(function (d) { return d.rain != null; })
       };
     }
@@ -268,11 +271,16 @@
     }
 
     // ---- Shared pieces -----------------------------------------------------------------------
-    function stats(svg, xs, labelY, valueY, size, day) {
-      [[V.t.high, deg(day.high)], [V.t.low, deg(day.low)], hasRain(day) ? [V.t.rain, day.rain + '%'] : null].forEach(function (s, i) {
-        if (!s) return;
-        txt(svg, xs[i], labelY, s[0], { size: 11, weight: 600, ls: 1 });
-        txt(svg, xs[i], valueY, s[1], { size: size, weight: 600 });
+    // uvXs: the columns used instead of xs when today's UV index is shown as an extra stat (hidden below 3).
+    function stats(svg, xs, labelY, valueY, size, day, uvXs) {
+      var uv = V.uvOn && uvXs && day.uv != null && day.uv >= 3;
+      var items = [[V.t.high, deg(day.high)], [V.t.low, deg(day.low)]];
+      if (hasRain(day)) items.push([V.t.rain, day.rain + '%']);
+      if (uv) items.push(['UV', String(day.uv)]);
+      var at = uv ? uvXs : xs;
+      items.forEach(function (s, i) {
+        txt(svg, at[i], labelY, s[0], { size: 11, weight: 600, ls: 1 });
+        txt(svg, at[i], valueY, s[1], { size: size, weight: 600 });
       });
     }
     function footer(svg, x0, x1, ruleY, y, size) {
@@ -397,7 +405,7 @@
       bigTemp(svg, 24, 134, 96, 318);
       icon(svg, D.now.icon, 347, 87.85, 1.826, 2.8);
       txt(svg, 376, 133, D.now.text, { size: 16, weight: 500, anchor: 'end' });
-      stats(svg, [24, 144, 264], 166, 189, 20, D.days[0]);
+      stats(svg, [24, 144, 264], 166, 189, 20, D.days[0], [24, 144, 264, 332]);
       rect(svg, 24, 208, 352, 1);
     }
 
@@ -413,7 +421,7 @@
         bigTemp(svg, 24, 178, 112, 191);
         icon(svg, D.now.icon, 223.0, 122.9, 2.068, 3.2);
         txt(svg, 24, 213, D.now.text, { size: 18, weight: 500 });
-        stats(svg, [24, 104, 184], 249, 277, 22, t);
+        stats(svg, [24, 104, 184], 249, 277, 22, t, [24, 90, 156, 222]);
         rect(svg, 24, 335 + e, 232, 1);
         if (m) {
           txt(svg, 24, 359 + e, D.t.tomorrow + ' · ' + m.label.toUpperCase(), { size: 11, weight: 600, ls: 1 });
@@ -510,7 +518,7 @@
         bigTemp(svg, 24, 118 + e / 3, 80, 320);
         icon(svg, D.now.icon, 347, 80 + e / 3, 1.5, 2.5);
         txt(svg, 376, 118 + e / 3, D.now.text, { size: 16, weight: 500, anchor: 'end' });
-        stats(svg, [24, 144, 264], 150 + e * 2 / 3, 173 + e * 2 / 3, 20, D.days[0]);
+        stats(svg, [24, 144, 264], 150 + e * 2 / 3, 173 + e * 2 / 3, 20, D.days[0], [24, 144, 264, 332]);
         footer(svg, 24, 376, 196 + e, 218 + e, 12);
       }
     };
