@@ -171,7 +171,7 @@
         dateLong: first ? t.dateLong(first) : '',
         dateShort: first ? t.dateShort(first) : '',
         updated: t.updated + ' ' + clock,
-        // Opt-in UV index (Open-Meteo only); shown for today from index 3 (moderate) up.
+        // Opt-in UV index (Open-Meteo only); shown for today whenever it is known.
         uvOn: !!C.uv,
         hasRain: D.days.some(function (d) { return d.rain != null; })
       };
@@ -271,9 +271,9 @@
     }
 
     // ---- Shared pieces -----------------------------------------------------------------------
-    // uvXs: the columns used instead of xs when today's UV index is shown as an extra stat (hidden below 3).
+    // uvXs: the columns used instead of xs when today's UV index is shown as an extra stat.
     function stats(svg, xs, labelY, valueY, size, day, uvXs) {
-      var uv = V.uvOn && uvXs && day.uv != null && day.uv >= 3;
+      var uv = V.uvOn && uvXs && day.uv != null;
       var items = [[V.t.high, deg(day.high)], [V.t.low, deg(day.low)]];
       if (hasRain(day)) items.push([V.t.rain, day.rain + '%']);
       if (uv) items.push(['UV', String(day.uv)]);

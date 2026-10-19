@@ -51,8 +51,8 @@ custom_fields:
 - keyname: show_uv
   field_type: boolean
   name: UV index
-  description: Shows today's UV index when it is 3 or higher. In Europe this adds one small request to Open-Meteo.
-  description-de: Zeigt den UV-Index von heute, wenn er 3 oder höher ist. In Europa kommt dafür eine kleine Anfrage an Open-Meteo dazu.
+  description: Shows today's UV index next to high, low and rain. In Europe this adds one small request to Open-Meteo.
+  description-de: Zeigt den UV-Index von heute neben Hoch, Tief und Regen. In Europa kommt dafür eine kleine Anfrage an Open-Meteo dazu.
   default: false
 - keyname: data_source
   field_type: select

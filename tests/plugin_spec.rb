@@ -174,10 +174,18 @@ RSpec.describe 'Weather Curve (DWD)' do
       end
     end
 
-    it 'shows no UV below index 3' do
-      low = uv_only.merge('daily' => uv_only['daily'].merge('uv_index_max' => [1.0] * 18))
-      mocks = uv_mocks.merge('https://api.open-meteo.com/*' => { json: low })
-      screen = trmnl.render(view: 'full', device: 'og_plus', mocks:, custom_fields: berlin.merge('show_uv' => 'true'))
+    [0.0, 1.0, 2.0].each do |index|
+      it "shows UV at index #{index.to_i}, below 3" do
+        low = uv_only.merge('daily' => uv_only['daily'].merge('uv_index_max' => [index] * 18))
+        mocks = uv_mocks.merge('https://api.open-meteo.com/*' => { json: low })
+        screen = trmnl.render(view: 'full', device: 'og_plus', mocks:, custom_fields: berlin.merge('show_uv' => 'true'))
+        expect(screen.text).to match(/UV#{index.to_i}/)
+      end
+    end
+
+    it 'shows no UV when the UV request failed (uv is null)' do
+      failing = uv_mocks.merge('https://api.open-meteo.com/*' => { status: 500, body: 'down' })
+      screen = trmnl.render(view: 'full', device: 'og_plus', mocks: failing, custom_fields: berlin.merge('show_uv' => 'true'))
       expect(screen.text).not_to match(/UV\d/)
     end
   end
