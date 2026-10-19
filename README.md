@@ -27,14 +27,19 @@ A 7-day weather forecast for [TRMNL](https://trmnl.com) e-paper displays: one te
 
 ## Data
 
-Forecasts come from the [Deutscher Wetterdienst (DWD)](https://www.dwd.de) MOSMIX model, served by the free [Bright Sky](https://brightsky.dev) API. MOSMIX covers thousands of stations worldwide, so the plugin works outside Germany too. No account or API key is needed.
+Two sources, picked per location (setting "Data source": Auto, DWD or Open-Meteo):
 
-Data: Deutscher Wetterdienst, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), via Bright Sky. This project is not affiliated with or endorsed by the DWD.
+- **Europe (Auto):** [Deutscher Wetterdienst (DWD)](https://www.dwd.de) MOSMIX model, served by the free [Bright Sky](https://brightsky.dev) API. Auto uses it between 34° and 72° N, 11° W and 26° E. The DWD has no rain forecast for most stations outside Europe (and a few inside, e.g. Moscow or Minsk), so a day without rain data shows no rain instead of 0 %.
+- **Everywhere else (Auto):** [Open-Meteo](https://open-meteo.com), free for non-commercial use, no API key.
+
+No account or API key is needed for either.
+
+Data: Deutscher Wetterdienst, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), via Bright Sky. [Weather data by Open-Meteo.com](https://open-meteo.com/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). This project is not affiliated with or endorsed by the DWD or Open-Meteo.
 
 ## How it works
 
-1. TRMNL polls Bright Sky hourly for the next 8 days of hourly data at the chosen location ([`src/settings.yml`](src/settings.yml)).
-2. A serverless transform condenses about 190 hourly rows into 7 daily rows ([`src/transform.py`](src/transform.py)).
+1. TRMNL polls Bright Sky or Open-Meteo hourly for the next 8 days of hourly data at the chosen location; a Liquid condition in the polling URL picks the source ([`src/settings.yml`](src/settings.yml)).
+2. A serverless transform turns either response into the same 7 daily rows (about 190 hourly rows each) ([`src/transform.py`](src/transform.py)).
 3. The views draw everything as one SVG per layout, in TRMNL's own Inter font ([`src/shared.liquid`](src/shared.liquid)).
 
 ## Development

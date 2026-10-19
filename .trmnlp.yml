@@ -13,6 +13,7 @@ custom_fields:
   location_name: ''
   language: Auto
   units: Celsius
+  data_source: Auto
 
 time_zone: Europe/Berlin
 

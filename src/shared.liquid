@@ -10,13 +10,13 @@
 {% assign dwd_joke = "now" | date: "%j" | plus: 0 | modulo: 3 %}
 {% if dwd_lang == "de" %}
   {% case dwd_joke %}
-    {% when 0 %}{% assign dwd_empty_title = "Die Vorhersage hält ein Nickerchen" %}{% assign dwd_empty_text = "Bright Sky antwortet gerade nicht. Bis sie aufwacht, hilft ein Blick aus dem Fenster." %}
+    {% when 0 %}{% assign dwd_empty_title = "Die Vorhersage hält ein Nickerchen" %}{% assign dwd_empty_text = "Der Wetterdienst antwortet gerade nicht. Bis die Vorhersage aufwacht, hilft ein Blick aus dem Fenster." %}
     {% when 1 %}{% assign dwd_empty_title = "Wetter nicht gefunden" %}{% assign dwd_empty_text = "Draußen ist es trotzdem. Beim nächsten Aktualisieren versuchen wir es wieder." %}
     {% else %}{% assign dwd_empty_title = "Wolken in der Leitung" %}{% assign dwd_empty_text = "Diesmal kam keine Vorhersage durch. Nächster Versuch beim nächsten Aktualisieren." %}
   {% endcase %}
 {% else %}
   {% case dwd_joke %}
-    {% when 0 %}{% assign dwd_empty_title = "The forecast is taking a nap" %}{% assign dwd_empty_text = "Bright Sky isn’t answering right now. Until it wakes up, the window works too." %}
+    {% when 0 %}{% assign dwd_empty_title = "The forecast is taking a nap" %}{% assign dwd_empty_text = "The weather service isn’t answering right now. Until it wakes up, the window works too." %}
     {% when 1 %}{% assign dwd_empty_title = "Weather not found" %}{% assign dwd_empty_text = "It’s still out there, though. We’ll try again at the next refresh." %}
     {% else %}{% assign dwd_empty_title = "Clouds in the cable" %}{% assign dwd_empty_text = "No forecast came through this time. Next try at the next refresh." %}
   {% endcase %}
@@ -48,6 +48,7 @@
     days: {{ days | json }},
     now: {{ now | json }},
     station: {{ station | json }},
+    source: {{ source | json }},
     updated: {{ updated | json }}
   };
   window.DWD_CFG = {
@@ -83,6 +84,8 @@
       return t;
     }
     function deg(t) { return t == null ? '–' : t + '°'; }
+    // Chance of rain: days without a rain forecast (rain: null, e.g. a DWD station outside Europe) show and draw nothing.
+    function hasRain(d) { return d.rain != null; }
     // Shortens a long station or display name with "…" until it fits maxW.
     function fit(t, maxW) {
       var s = t.textContent;
@@ -161,10 +164,13 @@
           return { label: t.days[d.weekday], high: temp(d.high), low: temp(d.low), rain: d.rain, icon: d.icon };
         }),
         now: { temp: temp(D.now.temp), icon: D.now.icon, text: t.cond[D.now.icon] || '' },
-        station: C.name || D.station,
+        station: C.name || D.station || (D.source === 'open-meteo' ? 'Open-Meteo' : ''),
+        // Short data credit for Open-Meteo (CC BY 4.0): in the station slot when no name is set, else with the footer.
+        credit: D.source === 'open-meteo' && (C.name || D.station) ? 'Open-Meteo' : '',
         dateLong: first ? t.dateLong(first) : '',
         dateShort: first ? t.dateShort(first) : '',
-        updated: t.updated + ' ' + clock
+        updated: t.updated + ' ' + clock,
+        hasRain: D.days.some(function (d) { return d.rain != null; })
       };
     }
 
@@ -263,14 +269,15 @@
 
     // ---- Shared pieces -----------------------------------------------------------------------
     function stats(svg, xs, labelY, valueY, size, day) {
-      [[V.t.high, deg(day.high)], [V.t.low, deg(day.low)], [V.t.rain, day.rain + '%']].forEach(function (s, i) {
+      [[V.t.high, deg(day.high)], [V.t.low, deg(day.low)], hasRain(day) ? [V.t.rain, day.rain + '%'] : null].forEach(function (s, i) {
+        if (!s) return;
         txt(svg, xs[i], labelY, s[0], { size: 11, weight: 600, ls: 1 });
         txt(svg, xs[i], valueY, s[1], { size: size, weight: 600 });
       });
     }
     function footer(svg, x0, x1, ruleY, y, size) {
       rect(svg, x0, ruleY, x1 - x0, 1);
-      txt(svg, x0, y, V.t.title, { size: size, weight: 500 });
+      txt(svg, x0, y, V.t.title + (V.credit ? ' · ' + V.credit : ''), { size: size, weight: 500 });
       txt(svg, x1, y, V.updated, { size: size, weight: 500, anchor: 'end' });
     }
 
@@ -321,10 +328,13 @@
         el(svg, 'line', { x1: gx, y1: g.gridTop, x2: gx, y2: g.base, stroke: hasGray ? GRAY : INK, 'stroke-width': 1 });
       }
 
-      el(svg, 'path', { d: monotone(withEnds(days.map(function (d) { return ry(d.rain); }))) +
-        'L' + g.x1 + ' ' + g.base + 'L' + g.x0 + ' ' + g.base + 'Z', fill: grayFill(svg) });
-      for (var x = g.x0; x < g.x1; x += 4) rect(svg, x, g.rainTop, 1, 1);
-      if (g.legend) {
+      // No rain area, 100 % line or legend when the source has no rain forecast (days in between count as 0 %).
+      if (V.hasRain) {
+        el(svg, 'path', { d: monotone(withEnds(days.map(function (d) { return ry(d.rain || 0); }))) +
+          'L' + g.x1 + ' ' + g.base + 'L' + g.x0 + ' ' + g.base + 'Z', fill: grayFill(svg) });
+        for (var x = g.x0; x < g.x1; x += 4) rect(svg, x, g.rainTop, 1, 1);
+      }
+      if (g.legend && V.hasRain) {
         // Just under the dotted 100 % line, clear of the low temperatures above it, on a paper label so
         // that rain and day separators (solid on black-and-white screens) don't run through it.
         var legend = txt(svg, g.x1 - 5, g.rainTop + 15, V.t.legend, { size: 11, weight: 500, anchor: 'end' });
@@ -367,8 +377,10 @@
         var b = y0 + pitch * i;
         txt(svg, 24, b, d.label, { size: 15, weight: 600 });
         icon(svg, d.icon, 77, b - 6, 0.86, 1.75);
-        drop(svg, 114.5, b - 5.5, 9.6, d.rain >= 50);
-        txt(svg, 124, b, d.rain + '%', { size: 14, weight: 500 });
+        if (hasRain(d)) {
+          drop(svg, 114.5, b - 5.5, 9.6, d.rain >= 50);
+          txt(svg, 124, b, d.rain + '%', { size: 14, weight: 500 });
+        }
         txt(svg, 194, b, deg(d.low), { size: 15, weight: 500, anchor: 'end' });
         for (var x = 204; x < 336; x += 4) rect(svg, x, b - 7, 1, 2);
         rect(svg, bx(d.low), b - 10, bx(d.high) - bx(d.low), 8, { rx: 4 });
@@ -407,8 +419,10 @@
           txt(svg, 24, 359 + e, D.t.tomorrow + ' · ' + m.label.toUpperCase(), { size: 11, weight: 600, ls: 1 });
           icon(svg, m.icon, 44.0, 389.9 + e, 1.32, 2.5);
           txt(svg, 76, 399 + e, deg(m.high) + ' / ' + deg(m.low), { size: 24, weight: 600 });
-          var pct = txt(svg, 256, 396 + e, m.rain + '%', { size: 18, weight: 500, anchor: 'end' });
-          drop(svg, 256 - pct.getComputedTextLength() - 6.5 - 4.15, 389.35 + e, 11.3, m.rain >= 50);
+          if (hasRain(m)) {
+            var pct = txt(svg, 256, 396 + e, m.rain + '%', { size: 18, weight: 500, anchor: 'end' });
+            drop(svg, 256 - pct.getComputedTextLength() - 6.5 - 4.15, 389.35 + e, 11.3, m.rain >= 50);
+          }
         }
         chart(svg, D.days, { x0: 296, x1: 776, gridTop: 48, base: 382 + e, rainTop: 322 + e * 0.75, yMax: 88,
           yMin: 286 + e * 0.75, legend: true, hiW: 2.5, loW: 1.5, hiR: 4.5, hiRW: 2, loR: 3.3, hiOff: -12, loOff: 24,
@@ -453,8 +467,10 @@
             svg.insertBefore(rect(svg, 40 - pw / 2, y - 11, pw, 22, { rx: 11 }), label);
           }
           icon(svg, d.icon, 82, y - 1, 0.9, 1.8);
-          drop(svg, 116.5, y - 0.5, 9.6, d.rain >= 50);
-          txt(svg, 126, b, d.rain + '%', { size: 14, weight: 500 });
+          if (hasRain(d)) {
+            drop(svg, 116.5, y - 0.5, 9.6, d.rain >= 50);
+            txt(svg, 126, b, d.rain + '%', { size: 14, weight: 500 });
+          }
           el(svg, 'circle', { cx: xh, cy: y, r: 4.5, fill: PAPER, stroke: INK, 'stroke-width': 2 });
           el(svg, 'circle', { cx: xl, cy: y, r: 3.3, fill: INK });
           txt(svg, xl - 9, b, deg(d.low), { size: 15, weight: 500, anchor: 'end' });
@@ -479,7 +495,7 @@
         bigTemp(svg, 24, 150 + e / 2, 80, 196);
         icon(svg, D.now.icon, 222, 112 + e / 2, 1.5, 2.5);
         txt(svg, 24, 182 + e / 2, D.now.text, { size: 16, weight: 500 });
-        txt(svg, 24, 214 + e, D.updated, { size: 12, weight: 500 });
+        txt(svg, 24, 214 + e, D.updated + (D.credit ? ' · ' + D.credit : ''), { size: 12, weight: 500 });
         chart(svg, D.days, { x0: 296, x1: 776, gridTop: 40, base: 184 + e, rainTop: 160 + e * 0.75, yMax: 68,
           yMin: 128 + e * 0.75, legend: false, iconY: 24, hiW: 2, loW: 1.5, hiR: 3.5, hiRW: 1.75, loR: 2.6, hiOff: -9,
           loOff: 18, hiSize: 14, loSize: 12, iconK: 0.75, iconSW: 1.6, dayY: 211 + e, daySize: 14, pillW: 30, pillH: 21,
