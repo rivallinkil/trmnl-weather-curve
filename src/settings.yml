@@ -7,7 +7,7 @@ polling_verb: get
 framework_version: latest
 serverless_language: python
 refresh_interval_floor: ''
-polling_url: "{%- assign wc_lat = lat_lon | split: \",\" | first | strip -%}{%- assign wc_lon = lat_lon | split: \",\" | last | strip -%}{%- assign wc_tz = trmnl.user.time_zone_iana | default: \"Europe/Berlin\" | url_encode -%}{%- assign wc_src = data_source | default: \"auto\" | downcase -%}{%- assign wc_uv = show_uv | default: \"false\" | downcase -%}{%- if wc_src != \"dwd\" and wc_src != \"open-meteo\" -%}{%- assign wc_la = wc_lat | plus: 0 -%}{%- assign wc_lo = wc_lon | plus: 0 -%}{%- if wc_la >= 34 and wc_la <= 72 and wc_lo >= -11 and wc_lo <= 26 -%}{%- assign wc_src = \"dwd\" -%}{%- else -%}{%- assign wc_src = \"open-meteo\" -%}{%- endif -%}{%- endif -%}{%- if wc_src == \"dwd\" -%}https://api.brightsky.dev/weather?lat={{ wc_lat }}&lon={{ wc_lon }}&tz={{ wc_tz }}&date={{ \"now\" | date: \"%Y-%m-%d\" }}&last_date={{ \"now\" | date: \"%s\" | plus: 691200 | date: \"%Y-%m-%d\" }}{%- if wc_uv == \"true\" -%}{% capture wc_nl %}\r\n{% endcapture %}{{ wc_nl }}https://api.open-meteo.com/v1/forecast?latitude={{ wc_lat }}&longitude={{ wc_lon }}&daily=uv_index_max&timezone={{ wc_tz }}&forecast_days=8{%- endif -%}{%- else -%}https://api.open-meteo.com/v1/forecast?latitude={{ wc_lat }}&longitude={{ wc_lon }}&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,is_day&current=temperature_2m,weather_code,is_day&timezone={{ wc_tz }}&forecast_days=8{%- if wc_uv == \"true\" -%}&daily=uv_index_max{%- endif -%}{%- endif -%}"
+polling_url: "{%- assign wc_lat = lat_lon | split: \",\" | first | strip -%}{%- assign wc_lon = lat_lon | split: \",\" | last | strip -%}{%- assign wc_tz = trmnl.user.time_zone_iana | default: \"Europe/Berlin\" | url_encode -%}{%- assign wc_src = data_source | default: \"auto\" | downcase -%}{%- assign wc_uv = show_uv | default: \"false\" | downcase -%}{%- assign wc_wind = show_wind | default: \"false\" | downcase -%}{%- if wc_wind == \"true\" -%}{%- assign wc_wind = \",wind_speed_10m\" -%}{%- else -%}{%- assign wc_wind = \"\" -%}{%- endif -%}{%- if wc_src != \"dwd\" and wc_src != \"open-meteo\" -%}{%- assign wc_la = wc_lat | plus: 0 -%}{%- assign wc_lo = wc_lon | plus: 0 -%}{%- if wc_la >= 34 and wc_la <= 72 and wc_lo >= -11 and wc_lo <= 26 -%}{%- assign wc_src = \"dwd\" -%}{%- else -%}{%- assign wc_src = \"open-meteo\" -%}{%- endif -%}{%- endif -%}{%- if wc_src == \"dwd\" -%}https://api.brightsky.dev/weather?lat={{ wc_lat }}&lon={{ wc_lon }}&tz={{ wc_tz }}&date={{ \"now\" | date: \"%Y-%m-%d\" }}&last_date={{ \"now\" | date: \"%s\" | plus: 691200 | date: \"%Y-%m-%d\" }}{%- if wc_uv == \"true\" -%}{% capture wc_nl %}\r\n{% endcapture %}{{ wc_nl }}https://api.open-meteo.com/v1/forecast?latitude={{ wc_lat }}&longitude={{ wc_lon }}&daily=uv_index_max&timezone={{ wc_tz }}&forecast_days=8{%- endif -%}{%- else -%}https://api.open-meteo.com/v1/forecast?latitude={{ wc_lat }}&longitude={{ wc_lon }}&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,is_day{{ wc_wind }}&current=temperature_2m,weather_code,is_day{{ wc_wind }}&timezone={{ wc_tz }}&forecast_days=8{%- if wc_uv == \"true\" -%}&daily=uv_index_max{%- endif -%}{%- endif -%}"
 polling_headers: ''
 polling_body: ''
 id: 500572
@@ -57,6 +57,13 @@ custom_fields:
   description: Shows today's UV index next to high, low and rain. In Europe this adds one small request to Open-Meteo.
   description-de: Zeigt den UV-Index von heute neben Hoch, Tief und Regen. In Europa kommt dafür eine kleine Anfrage an Open-Meteo dazu.
   description-fr: Affiche l'indice UV du jour à côté du max, du min et de la pluie. En Europe, cela ajoute une petite requête à Open-Meteo.
+  default: false
+- keyname: show_wind
+  field_type: boolean
+  name: Wind
+  description: Shows the current wind speed (km/h, or mph with Fahrenheit) in the full layout.
+  description-de: Zeigt die aktuelle Windgeschwindigkeit (km/h, oder mph mit Fahrenheit) in der Vollansicht.
+  description-fr: Affiche la vitesse actuelle du vent (km/h, ou mph avec Fahrenheit) dans la vue complète.
   default: false
 - keyname: data_source
   field_type: select

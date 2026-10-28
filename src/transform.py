@@ -6,7 +6,7 @@ Input: the polled response of either source, told apart by its shape:
   Open-Meteo        {hourly: {time: [...], ...}, current: {...}, utc_offset_seconds: ...}
 With the optional UV index, TRMNL wraps several polling URLs as {IDX_0: forecast, IDX_1: Open-Meteo UV}; a
 single URL arrives unwrapped. UV is read from any response with {daily: {time: [...], uv_index_max: [...]}}.
-Output: the same for both. Language- and unit-neutral data (°C, unrounded; weekday as 0 = Monday);
+Output: the same for both. Language- and unit-neutral data (°C, km/h, unrounded; weekday as 0 = Monday);
 the views translate labels and convert units. A day without any rain data has rain: None.
 """
 from collections import Counter
@@ -68,6 +68,7 @@ def rows_brightsky(input):
             "icon": w.get("icon"),
             "precipitation": w.get("precipitation"),
             "probs": [w[k] for k in ("precipitation_probability", "precipitation_probability_6h") if w.get(k) is not None],
+            "wind": w.get("wind_speed"),
         })
     # The hourly record closest to now.
     now_utc = datetime.now(timezone.utc)
@@ -75,7 +76,7 @@ def rows_brightsky(input):
     forecast = next((s for s in input.get("sources", []) if s.get("observation_type") == "forecast"), {})
     station = (forecast.get("station_name") or "").title()
     now = {"temp": rnd1(current["temperature"]), "icon": current["icon"] or "cloudy", "t": current["_t"],
-           "updated": current["timestamp"]} if current else None
+           "wind": rnd1(current["wind"]), "updated": current["timestamp"]} if current else None
     return rows, now, station
 
 
@@ -97,6 +98,7 @@ def rows_open_meteo(input):
             "icon": wmo_icon(col("weather_code", i), col("is_day", i) != 0),
             "precipitation": col("precipitation", i),
             "probs": [] if prob is None else [prob],
+            "wind": col("wind_speed_10m", i),
         })
 
     # Local time without offset ("2026-10-19T11:15"); the offset comes from the response.
@@ -109,11 +111,12 @@ def rows_open_meteo(input):
         t = datetime.fromisoformat(cur["time"])
         icon = wmo_icon(cur.get("weather_code"), cur.get("is_day") != 0)
         # Same shape as Bright Sky's "updated": the current hour, local time with offset.
-        now = {"temp": rnd1(cur.get("temperature_2m")), "icon": icon, "t": t,
+        now = {"temp": rnd1(cur.get("temperature_2m")), "icon": icon, "t": t, "wind": rnd1(cur.get("wind_speed_10m")),
                "updated": t.strftime("%Y-%m-%dT%H:00:00") + zone}
     elif rows:
         r = rows[0]
-        now = {"temp": rnd1(r["temperature"]), "icon": r["icon"], "t": r["_t"], "updated": r["timestamp"] + ":00" + zone}
+        now = {"temp": rnd1(r["temperature"]), "icon": r["icon"], "t": r["_t"], "wind": rnd1(r["wind"]),
+               "updated": r["timestamp"] + ":00" + zone}
     return rows, now, ""
 
 
@@ -181,6 +184,8 @@ def run(input):
         "now": {
             "temp": now["temp"] if now else None,
             "icon": now["icon"] if now else "cloudy",
+            # km/h; None when not requested (Open-Meteo) or not delivered.
+            "wind": now["wind"] if now else None,
         },
         "station": station,
         "source": source,

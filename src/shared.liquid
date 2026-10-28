@@ -61,6 +61,7 @@
     lang: {{ dwd_lang | json }},
     fahrenheit: {% if dwd_units == "fahrenheit" %}true{% else %}false{% endif %},
     uv: {% if dwd_fields.show_uv == "true" %}true{% else %}false{% endif %},
+    wind: {% if dwd_fields.show_wind == "true" %}true{% else %}false{% endif %},
     name: {{ dwd_fields.location_name | strip | json }}
   };
 
@@ -183,7 +184,10 @@
         days: D.days.map(function (d) {
           return { label: t.days[d.weekday], high: temp(d.high), low: temp(d.low), rain: d.rain, icon: d.icon, uv: d.uv };
         }),
-        now: { temp: temp(D.now.temp), icon: D.now.icon, text: t.cond[D.now.icon] || '' },
+        now: { temp: temp(D.now.temp), icon: D.now.icon, text: t.cond[D.now.icon] || '',
+          // Opt-in wind speed: km/h, mph with Fahrenheit; empty when off or unknown.
+          wind: C.wind && D.now.wind != null ? Math.round(C.fahrenheit ? D.now.wind * 0.621371 : D.now.wind) +
+            (C.fahrenheit ? ' mph' : ' km/h') : '' },
         station: C.name || D.station || (D.source === 'open-meteo' ? 'Open-Meteo' : ''),
         // Short data credit for Open-Meteo (CC BY 4.0): in the station slot when no name is set, else with the footer.
         credit: D.source === 'open-meteo' && (C.name || D.station) ? 'Open-Meteo' : '',
@@ -441,6 +445,11 @@
         icon(svg, D.now.icon, 223.0, 122.9, 2.068, 3.2);
         txt(svg, 24, 213, D.now.text, { size: 18, weight: 500 });
         stats(svg, [24, 104, 184], 249, 277, 22, t, [24, 90, 156, 222]);
+        // Opt-in wind, under the stats.
+        if (D.now.wind) {
+          icon(svg, 'wind', 34, 302, 0.85, 2);
+          txt(svg, 50, 309, D.now.wind, { size: 18, weight: 500 });
+        }
         rect(svg, 24, 335 + e, 232, 1);
         if (m) {
           txt(svg, 24, 359 + e, D.t.tomorrow + ' · ' + m.label.toUpperCase(), { size: 11, weight: 600, ls: 1 });
