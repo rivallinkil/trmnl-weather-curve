@@ -1,9 +1,9 @@
 {% assign dwd_fields = trmnl.plugin_settings.custom_fields_values %}
 {% assign dwd_lang = dwd_fields.language | default: "auto" | downcase %}
 {% assign dwd_units = dwd_fields.units | default: "celsius" | downcase %}
-{% if dwd_lang != "de" and dwd_lang != "en" %}
+{% if dwd_lang != "de" and dwd_lang != "en" and dwd_lang != "fr" %}
   {% assign dwd_locale = trmnl.user.locale | default: "en" | slice: 0, 2 | downcase %}
-  {% if dwd_locale == "de" %}{% assign dwd_lang = "de" %}{% else %}{% assign dwd_lang = "en" %}{% endif %}
+  {% if dwd_locale == "de" or dwd_locale == "fr" %}{% assign dwd_lang = dwd_locale %}{% else %}{% assign dwd_lang = "en" %}{% endif %}
 {% endif %}
 
 {% comment %} No forecast (API down or empty): a sleeping cloud and one of three lines, changing daily. {% endcomment %}
@@ -13,6 +13,12 @@
     {% when 0 %}{% assign dwd_empty_title = "Die Vorhersage hält ein Nickerchen" %}{% assign dwd_empty_text = "Der Wetterdienst antwortet gerade nicht. Bis die Vorhersage aufwacht, hilft ein Blick aus dem Fenster." %}
     {% when 1 %}{% assign dwd_empty_title = "Wetter nicht gefunden" %}{% assign dwd_empty_text = "Draußen ist es trotzdem. Beim nächsten Aktualisieren versuchen wir es wieder." %}
     {% else %}{% assign dwd_empty_title = "Wolken in der Leitung" %}{% assign dwd_empty_text = "Diesmal kam keine Vorhersage durch. Nächster Versuch beim nächsten Aktualisieren." %}
+  {% endcase %}
+{% elsif dwd_lang == "fr" %}
+  {% case dwd_joke %}
+    {% when 0 %}{% assign dwd_empty_title = "La météo fait la sieste" %}{% assign dwd_empty_text = "Le service météo ne répond pas pour l’instant. En attendant son réveil, la fenêtre fait aussi l’affaire." %}
+    {% when 1 %}{% assign dwd_empty_title = "Météo introuvable" %}{% assign dwd_empty_text = "Elle est pourtant toujours dehors. On réessaie à la prochaine actualisation." %}
+    {% else %}{% assign dwd_empty_title = "Des nuages dans le câble" %}{% assign dwd_empty_text = "Aucune prévision n’est passée cette fois. Nouvel essai à la prochaine actualisation." %}
   {% endcase %}
 {% else %}
   {% case dwd_joke %}
@@ -148,6 +154,19 @@
         cond: { 'clear-day': 'Sunny', 'clear-night': 'Clear', 'partly-cloudy-day': 'Partly cloudy',
           'partly-cloudy-night': 'Partly cloudy', 'partly-cloudy-rain': 'Showers', 'cloudy': 'Cloudy', 'fog': 'Fog',
           'wind': 'Windy', 'rain': 'Rain', 'sleet': 'Sleet', 'snow': 'Snow', 'hail': 'Hail', 'thunderstorm': 'Thunderstorm' }
+      },
+      fr: {
+        days: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+        daysLong: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
+        months: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
+        monthsShort: ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'],
+        dateLong: function (d) { return this.daysLong[d.weekday] + ' ' + d.day + ' ' + this.months[d.month - 1]; },
+        dateShort: function (d) { return this.days[d.weekday] + ' ' + d.day + ' ' + this.monthsShort[d.month - 1]; },
+        high: 'MAX', low: 'MIN', rain: 'PLUIE', tomorrow: 'DEMAIN', legend: '100 % de risque de pluie',
+        updated: 'Mis à jour', title: 'Weather Curve',
+        cond: { 'clear-day': 'Ensoleillé', 'clear-night': 'Dégagé', 'partly-cloudy-day': 'Éclaircies',
+          'partly-cloudy-night': 'Éclaircies', 'partly-cloudy-rain': 'Averses', 'cloudy': 'Nuageux', 'fog': 'Brouillard',
+          'wind': 'Venteux', 'rain': 'Pluie', 'sleet': 'Pluie et neige', 'snow': 'Neige', 'hail': 'Grêle', 'thunderstorm': 'Orage' }
       }
     };
 

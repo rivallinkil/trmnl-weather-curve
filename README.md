@@ -20,7 +20,7 @@ A 7-day weather forecast for [TRMNL](https://trmnl.com) e-paper displays: one te
 
 - 7-day temperature curve with daily highs and lows, weather icons and chance of rain
 - Current temperature, today's high/low/rain and an outlook for tomorrow
-- German or English labels (or follow the TRMNL account language)
+- German, English or French labels (or follow the TRMNL account language)
 - Celsius or Fahrenheit (Fahrenheit also switches to a 12-hour clock)
 - Optional UV index for today, from Open-Meteo; off by default
 - Flat gray on grayscale screens, a dot pattern on black-and-white screens

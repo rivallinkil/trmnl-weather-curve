@@ -19,12 +19,14 @@ custom_fields:
   name: Location
   description: Search for a city or postal code, or enter coordinates as "lat,lon".
   description-de: Ort oder Postleitzahl suchen, oder Koordinaten als "lat,lon" eingeben.
+  description-fr: Cherchez une ville ou un code postal, ou saisissez des coordonnées au format "lat,lon".
   default: 52.5200,13.4050
 - keyname: location_name
   field_type: string
   name: Location name
   description: Shown as the title, for example your city. Open-Meteo sends no place name, so set one here. Left empty, the title shows the nearest DWD station (Europe only).
   description-de: Wird als Titel angezeigt, zum Beispiel deine Stadt. Open-Meteo liefert keinen Ortsnamen, also trag hier einen ein. Leer gelassen zeigt der Titel die nächste DWD-Station (nur in Europa).
+  description-fr: Affiché comme titre, par exemple votre ville. Open-Meteo ne fournit pas de nom de lieu, indiquez-en un ici. Laissé vide, le titre affiche la station DWD la plus proche (Europe uniquement).
   placeholder: New York
   optional: true
 - keyname: language
@@ -32,16 +34,19 @@ custom_fields:
   name: Language
   description: Auto follows the language of your TRMNL account.
   description-de: Auto folgt der Sprache deines TRMNL-Kontos.
+  description-fr: Auto suit la langue de votre compte TRMNL.
   options:
   - Auto: auto
   - Deutsch: de
   - English: en
+  - Français: fr
   default: auto
 - keyname: units
   field_type: select
   name: Temperature unit
   description: Fahrenheit also switches the clock to 12-hour time.
   description-de: Fahrenheit stellt auch die Uhrzeit auf 12 Stunden um.
+  description-fr: Fahrenheit passe aussi l'heure au format 12 heures.
   options:
   - Celsius: celsius
   - Fahrenheit: fahrenheit
@@ -51,12 +56,14 @@ custom_fields:
   name: UV index
   description: Shows today's UV index next to high, low and rain. In Europe this adds one small request to Open-Meteo.
   description-de: Zeigt den UV-Index von heute neben Hoch, Tief und Regen. In Europa kommt dafür eine kleine Anfrage an Open-Meteo dazu.
+  description-fr: Affiche l'indice UV du jour à côté du max, du min et de la pluie. En Europe, cela ajoute une petite requête à Open-Meteo.
   default: false
 - keyname: data_source
   field_type: select
   name: Data source
   description: Auto uses the DWD in Europe and Open-Meteo everywhere else. The DWD has no rain forecast for most stations outside Europe.
   description-de: Auto nutzt in Europa den DWD und sonst Open-Meteo. Außerhalb Europas hat der DWD für die meisten Stationen keine Regenvorhersage.
+  description-fr: Auto utilise le DWD en Europe et Open-Meteo ailleurs. Hors d'Europe, le DWD n'a pas de prévision de pluie pour la plupart des stations.
   options:
   - Auto: auto
   - DWD: dwd
@@ -67,7 +74,7 @@ custom_fields:
   name: About This Plugin
   category: environment,life
   github_url: https://github.com/samumatic/trmnl-weather-curve
-  description: 'Shows a 7-day forecast as one temperature curve for daily highs and lows, with a weather icon per day and the chance of rain along the bottom. Today and tomorrow are shown on the left. Available in German or English, in °C or °F, with an optional UV index.<br><br>In Europe the forecast comes from the <a href="https://www.dwd.de" class="underline" target="_blank">Deutscher Wetterdienst (DWD)</a> via <a href="https://brightsky.dev" class="underline" target="_blank">Bright Sky</a>, elsewhere from <a href="https://open-meteo.com/" class="underline" target="_blank">Open-Meteo</a>. No account or API key needed.<br><br>Data: DWD (CC BY 4.0) via Bright Sky, and <a href="https://open-meteo.com/" class="underline" target="_blank">Weather data by Open-Meteo.com</a> (CC BY 4.0). Not affiliated with the DWD or Open-Meteo.<br><br>Source code, feedback and bug reports: <a href="https://github.com/samumatic/trmnl-weather-curve" class="underline" target="_blank">GitHub</a>'
+  description: 'Shows a 7-day forecast as one temperature curve for daily highs and lows, with a weather icon per day and the chance of rain along the bottom. Today and tomorrow are shown on the left. Available in German, English or French, in °C or °F, with an optional UV index.<br><br>In Europe the forecast comes from the <a href="https://www.dwd.de" class="underline" target="_blank">Deutscher Wetterdienst (DWD)</a> via <a href="https://brightsky.dev" class="underline" target="_blank">Bright Sky</a>, elsewhere from <a href="https://open-meteo.com/" class="underline" target="_blank">Open-Meteo</a>. No account or API key needed.<br><br>Data: DWD (CC BY 4.0) via Bright Sky, and <a href="https://open-meteo.com/" class="underline" target="_blank">Weather data by Open-Meteo.com</a> (CC BY 4.0). Not affiliated with the DWD or Open-Meteo.<br><br>Source code, feedback and bug reports: <a href="https://github.com/samumatic/trmnl-weather-curve" class="underline" target="_blank">GitHub</a>'
 name: Weather Curve
 description: Temperature curve & rain, 7 days
 refresh_interval: 60
