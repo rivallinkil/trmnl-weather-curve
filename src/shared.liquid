@@ -413,9 +413,9 @@
     var TALL = 860;
 
     var DESIGNS = {
-      // 800 x 480 and taller (TRMNL X)
-      full: function (svg, H) {
-        var D = V, t = D.days[0], m = D.days[1], e = H - 480;
+      // 800 x 480 and taller (TRMNL X); wider (W > 800) gives the extra width to the chart.
+      full: function (svg, H, W) {
+        var D = V, t = D.days[0], m = D.days[1], e = H - 480, r = (W || 800) - 24;
         fit(txt(svg, 24, 43, D.station, { size: 20, weight: 600 }), 232);
         txt(svg, 24, 64, D.dateLong, { size: 14 });
         bigTemp(svg, 24, 178, 112, 191);
@@ -432,10 +432,10 @@
             drop(svg, 256 - pct.getComputedTextLength() - 6.5 - 4.15, 389.35 + e, 11.3, m.rain >= 50);
           }
         }
-        chart(svg, D.days, { x0: 296, x1: 776, gridTop: 48, base: 382 + e, rainTop: 322 + e * 0.75, yMax: 88,
+        chart(svg, D.days, { x0: 296, x1: r, gridTop: 48, base: 382 + e, rainTop: 322 + e * 0.75, yMax: 88,
           yMin: 286 + e * 0.75, legend: true, hiW: 2.5, loW: 1.5, hiR: 4.5, hiRW: 2, loR: 3.3, hiOff: -12, loOff: 24,
           hiSize: 17, loSize: 15, iconK: 1, iconSW: 2, dayY: 409 + e, daySize: 15, pillW: 34, pillH: 24, pillY: 392 + e });
-        footer(svg, 24, 776, 436 + e, 458 + e, 13);
+        footer(svg, 24, r, 436 + e, 458 + e, 13);
       },
 
       // 400 x 520 to TALL: today on top, the 7-day curve below (full view in portrait).
@@ -526,8 +526,13 @@
     // Picks [design, width, height] for a TRMNL view slot from its aspect ratio (width / height).
     // Heights are clamped; anything beyond is centered by preserveAspectRatio.
     function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-    function plan(view, w, h) {
+    // rel: the slot's share of the screen's width and height (0 when unknown).
+    function plan(view, w, h, rel) {
       var aspect = w / h;
+      // A slot as wide as the screen, at least two thirds of its height and wider than 9:5 (a merged cell of a
+      // custom 3x3 mashup on TRMNL X, or a wide screen): the full design, widened instead of letterboxed.
+      // Relative sizes, since a slot's pixels are CSS pixels on some renderers and device pixels on others.
+      if (aspect >= 1.8 && rel.w >= 0.9 && rel.h >= 0.6) return ['full', Math.min(480 * aspect, 1200), 480];
       if (view === 'full' && aspect >= 1.2) return ['full', 800, clamp(800 / aspect, 480, 680)];
       if (view === 'full' && 400 / aspect >= TALL) return ['column', 400, clamp(400 / aspect, TALL, 1400)];
       if (view === 'full' && 400 / aspect >= 520) return ['portrait', 400, clamp(400 / aspect, 520, 1400)];
@@ -553,13 +558,15 @@
       var box = svg.parentNode.getBoundingClientRect(), sized = box.width && box.height;
       if (!sized && svg.getAttribute('data-drawn')) return;
       var vb = svg.dwdDefault || (svg.dwdDefault = [svg.viewBox.baseVal.width, svg.viewBox.baseVal.height]);
-      var p = plan(svg.getAttribute('data-dwd-view'), sized ? box.width : vb[0], sized ? box.height : vb[1]);
+      var screen = (document.querySelector('.screen') || document.documentElement).getBoundingClientRect();
+      var rel = sized && screen.width && screen.height ? { w: box.width / screen.width, h: box.height / screen.height } : { w: 0, h: 0 };
+      var p = plan(svg.getAttribute('data-dwd-view'), sized ? box.width : vb[0], sized ? box.height : vb[1], rel);
       var key = p[0] + ' ' + Math.round(p[1]) + ' ' + Math.round(p[2]);
       if (svg.getAttribute('data-drawn') === key) return;
       svg.setAttribute('data-drawn', key);
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       svg.setAttribute('viewBox', '0 0 ' + p[1] + ' ' + p[2]);
-      DESIGNS[p[0]](svg, p[2]);
+      DESIGNS[p[0]](svg, p[2], p[1]);
     }
 
     window.dwdDraw = function () {

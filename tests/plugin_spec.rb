@@ -220,4 +220,26 @@ RSpec.describe 'Weather Curve (DWD)' do
       end
     end
   end
+
+  # A merged 2x3 cell of a custom 3x3 mashup on TRMNL X: full width, about two thirds of the height.
+  # Simulated by shrinking the view, since trmnlp has no custom mashups.
+  describe 'wide slots' do
+    let(:cell) { '<style>.view { height: 65% !important; width: 100% !important; flex: none !important; }</style>' }
+
+    def design(screen) = screen.evaluate("document.querySelector('svg[data-dwd-view]').getAttribute('data-drawn')")
+
+    it 'widens the full design in a custom 2x3 cell instead of letterboxing it' do
+      screen = trmnl.render(view: 'full', device: 'v2', mocks:, custom_fields:, head: cell)
+      expect(screen).to have_no_problems.and(have_no_leaked_text).and(have_no_overlapping_text)
+      name, width, height = design(screen).split.then { [it[0], it[1].to_i, it[2].to_i] }
+      expect([name, height]).to eq(['full', 480])
+      expect(width).to be > 900
+      expect(screen.text).to include('HIGH', 'LOW', 'TOMORROW')
+    end
+
+    it 'keeps the full design 800 wide on TRMNL OG and TRMNL X' do
+      expect(design(trmnl.render(view: 'full', device: 'og_plus', mocks:, custom_fields:))).to eq('full 800 480')
+      expect(design(trmnl.render(view: 'full', device: 'v2', mocks:, custom_fields:))).to eq('full 800 600')
+    end
+  end
 end
