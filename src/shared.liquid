@@ -22,25 +22,20 @@
   {% endcase %}
 {% endif %}
 {% capture dwd_empty %}
-  <div class="dwd-empty">
+  <div class="layout layout--col layout--center gap dwd-empty">
     <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M24 54H70A14 14 0 0 0 70 26A20 20 0 0 0 32 26A14 14 0 0 0 24 54Z"/>
       <path d="M38 41q4 4 8 0M54 41q4 4 8 0"/>
       <path d="M76 6h8l-8 9h8M66 17h5l-5 6h5" stroke-width="2.5"/>
     </svg>
-    <p class="dwd-empty__title">{{ dwd_empty_title }}</p>
-    <p class="dwd-empty__text">{{ dwd_empty_text }}</p>
+    <span class="title text--center lg:title--large">{{ dwd_empty_title }}</span>
+    <p class="description text--center lg:description--large" data-clamp="3">{{ dwd_empty_text }}</p>
   </div>
 {% endcapture %}
 <style>
-  /* Sized from the slot (container units), solid text only: gray text breaks up on black-and-white screens. */
-  .dwd-empty{container-type:size;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;gap:2.5cqmin;padding:0 8cqw;box-sizing:border-box;text-align:center;
-    font-family:'Inter Variable',Inter,sans-serif}
-  .dwd-empty p{margin:0}
+  /* Framework elements size the text; only the cloud (an SVG, no Framework class) is sized from the slot. */
+  .dwd-empty{container-type:size;padding:0 8cqw;box-sizing:border-box}
   .dwd-empty svg{width:clamp(72px,26cqmin,200px);height:auto}
-  .dwd-empty__title{font-size:clamp(17px,6.5cqmin,40px);line-height:1.2;font-weight:600;text-wrap:balance}
-  .dwd-empty__text{font-size:clamp(13px,3.8cqmin,22px);line-height:1.35;font-weight:500;max-width:30em;text-wrap:balance}
 </style>
 
 <script>
